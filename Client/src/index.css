@@ -6,31 +6,67 @@
 @import './styles/form.css';
 
 @layer base {
+  /* Base Font Settings */
   html {
-    font-family: 'Roboto', sans-serif;
+    font-family: 'Inter', 'Nunito', 'Arial', sans-serif;
     scroll-behavior: smooth;
   }
+  
+  /* Body Styles */
   body {
     @apply bg-background dark:bg-dark-bg text-text dark:text-dark-text transition-colors duration-300;
   }
-  h1, h2, h3, h4, h5, h6 {
-    font-family: 'Poppins', sans-serif;
+  
+  /* Modern & Youthful Theme (Current) */
+  .theme-modern h1, .theme-modern h2, .theme-modern h3, .theme-modern h4, .theme-modern h5, .theme-modern h6 {
+    @apply font-heading;
   }
+  
+  /* Professional & Trustworthy Theme */
+  .theme-professional h1, .theme-professional h2, .theme-professional h3, .theme-professional h4, .theme-professional h5, .theme-professional h6 {
+    @apply font-heading-pro;
+  }
+  
+  .theme-professional body {
+    @apply bg-background-pro dark:bg-primary-pro text-text-pro dark:text-dark-text;
+  }
+  
+  /* Default Heading Styles */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-heading;
+  }
+  
   h1 {
     @apply text-4xl font-bold;
   }
+  
   h2 {
     @apply text-3xl font-semibold;
   }
+  
+  h3 {
+    @apply text-2xl font-semibold;
+  }
+  
+  h4 {
+    @apply text-xl font-semibold;
+  }
+  
+  /* Paragraph Styles */
   p {
     @apply text-base leading-relaxed;
   }
 }
 
 @layer components {
-  /* Buttons */
+  /* Buttons - Modern & Youthful Style (Current) */
   .btn {
-    @apply bg-secondary text-white py-3 px-5 rounded-lg font-semibold transition duration-300 hover:bg-[#23958C] focus:outline-none focus:ring-2 focus:ring-secondary focus:ring-opacity-50 disabled:opacity-60 disabled:cursor-not-allowed shadow-sm hover:shadow-md;
+    @apply bg-secondary text-[#1A1A1A] py-3 px-5 rounded-lg font-semibold transition duration-300 hover:bg-[#00B370] focus:outline-none focus:ring-2 focus:ring-secondary focus:ring-opacity-50 disabled:opacity-60 disabled:cursor-not-allowed shadow-sm hover:shadow-md;
+  }
+  
+  /* Buttons - Professional & Trustworthy Style */
+  .btn-pro {
+    @apply bg-secondary-pro text-white py-3 px-5 rounded-md font-semibold transition duration-300 hover:bg-[#23958C] focus:outline-none focus:ring-2 focus:ring-secondary-pro focus:ring-opacity-50 disabled:opacity-60 disabled:cursor-not-allowed;
   }
   
   .btn-secondary {
@@ -38,17 +74,27 @@
   }
   
   .btn-outline {
-    @apply border-2 border-secondary text-secondary dark:text-accent py-3 px-5 rounded-md font-semibold transition duration-300 hover:bg-secondary hover:text-white dark:hover:bg-accent focus:outline-none focus:ring-2 focus:ring-secondary focus:ring-opacity-50;
+    @apply border-2 border-secondary text-secondary dark:text-accent py-3 px-5 rounded-md font-semibold transition duration-300 hover:bg-secondary hover:text-[#1A1A1A] dark:hover:bg-accent focus:outline-none focus:ring-2 focus:ring-secondary focus:ring-opacity-50;
   }
   
-  /* Cards */
+  /* Cards - Modern & Youthful Style (Current) */
   .card {
-    @apply bg-white dark:bg-[#1E1E1E] rounded-lg shadow-md p-6 border border-gray-100 dark:border-gray-800 transition-all duration-300;
+    @apply bg-white dark:bg-[#1E1E1E] rounded-lg shadow-card p-6 border border-gray-100 dark:border-gray-800 transition-all duration-300 hover:shadow-card-hover;
+  }
+  
+  /* Cards - Professional & Trustworthy Style */
+  .card-pro {
+    @apply bg-white dark:bg-[#1E2A38] rounded-lg shadow-card p-6 border border-gray-100 dark:border-gray-800 transition-all duration-300 hover:shadow-card-hover;
+  }
+  
+  /* Glassmorphism Card */
+  .glass-card {
+    @apply bg-white bg-opacity-20 backdrop-filter backdrop-blur-lg rounded-lg p-6 border border-white border-opacity-20 transition-all duration-300;
   }
   
   /* Form Elements */
   .input-field {
-    @apply w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary focus:border-secondary dark:focus:ring-accent dark:focus:border-accent bg-white dark:bg-[#2D2D2D] text-text dark:text-dark-text transition-all duration-200 shadow-sm;
+    @apply w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary focus:border-secondary dark:focus:ring-accent dark:focus:border-accent bg-white dark:bg-[#2D2D2D] text-text dark:text-dark-text transition-all duration-200 shadow-sm hover:border-gray-400 dark:hover:border-gray-600 hover:shadow-md;
   }
   
   .form-label {
@@ -58,6 +104,18 @@
   /* Navigation */
   .nav-link {
     @apply text-gray-700 dark:text-gray-300 hover:text-secondary dark:hover:text-accent transition-colors duration-200 px-3 py-2 rounded-md text-sm font-medium;
+  }
+  
+  .nav-link-hover {
+    @apply relative overflow-hidden;
+  }
+  
+  .nav-link-hover::after {
+    @apply content-[""] absolute bottom-0 left-0 w-0 h-0.5 bg-secondary dark:bg-accent transition-all duration-300;
+  }
+  
+  .nav-link-hover:hover::after {
+    @apply w-full;
   }
   
   .nav-link-active {

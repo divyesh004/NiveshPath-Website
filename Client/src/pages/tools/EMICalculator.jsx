@@ -15,6 +15,16 @@ const EMICalculator = ({ darkMode, setDarkMode }) => {
     tenureType: 'years' // years or months
   });
   
+  // Validation limits
+  const limits = {
+    loanAmount: { min: 10000, max: 10000000 }, // Max 1 Crore
+    interestRate: { min: 1, max: 20 }, // Max 20%
+    loanTenure: { 
+      years: { min: 1, max: 30 }, // Max 30 years
+      months: { min: 1, max: 365 } // Max 365 months
+    }
+  };
+  
   const [results, setResults] = useState({
     emi: 0,
     totalInterest: 0,
@@ -24,9 +34,34 @@ const EMICalculator = ({ darkMode, setDarkMode }) => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    
+    if (name === 'tenureType') {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value,
+        // Reset tenure to max if current value exceeds the new type's max
+        loanTenure: prev.loanTenure > limits.loanTenure[value].max ? 
+          limits.loanTenure[value].max : prev.loanTenure
+      }));
+      return;
+    }
+    
+    // Apply validation limits
+    let parsedValue = parseFloat(value) || 0;
+    
+    if (name === 'loanAmount') {
+      parsedValue = Math.min(Math.max(parsedValue, limits.loanAmount.min), limits.loanAmount.max);
+    } else if (name === 'interestRate') {
+      parsedValue = Math.min(Math.max(parsedValue, limits.interestRate.min), limits.interestRate.max);
+    } else if (name === 'loanTenure') {
+      const maxTenure = limits.loanTenure[formData.tenureType].max;
+      const minTenure = limits.loanTenure[formData.tenureType].min;
+      parsedValue = Math.min(Math.max(parsedValue, minTenure), maxTenure);
+    }
+    
     setFormData(prev => ({
       ...prev,
-      [name]: name === 'tenureType' ? value : parseFloat(value) || 0
+      [name]: parsedValue
     }));
   };
 
@@ -162,10 +197,15 @@ const EMICalculator = ({ darkMode, setDarkMode }) => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
           {/* Input Form */}
           <div className="lg:col-span-1">
-            <div className="card p-6">
-              <h3 className="text-xl font-medium text-primary dark:text-white mb-4">Enter your loan details</h3>
+            <div className="card p-4 sm:p-6 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-all duration-300">
+              <h3 className="text-lg sm:text-xl font-medium text-primary dark:text-white mb-3 sm:mb-4 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+                Enter your loan details
+              </h3>
               
-              <div className="space-y-4">
+              <div className="space-y-5">
                 <div>
                   <label htmlFor="loanAmount" className="form-label">
                     Loan Amount (₹)
@@ -177,16 +217,16 @@ const EMICalculator = ({ darkMode, setDarkMode }) => {
                       name="loanAmount"
                       value={formData.loanAmount}
                       onChange={handleChange}
-                      min="10000"
-                      max="100000000"
+                      min={limits.loanAmount.min}
+                      max={limits.loanAmount.max}
                       className="input-field"
                     />
                   </div>
                   <div className="mt-2">
                     <input
                       type="range"
-                      min="10000"
-                      max="10000000"
+                      min={limits.loanAmount.min}
+                      max={limits.loanAmount.max}
                       step="10000"
                       value={formData.loanAmount}
                       onChange={handleChange}
@@ -195,7 +235,7 @@ const EMICalculator = ({ darkMode, setDarkMode }) => {
                     />
                     <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
                       <span>₹10,000</span>
-                      <span>₹1 करोड़</span>
+                      <span>₹1 Crore</span>
                     </div>
                   </div>
                 </div>
@@ -211,8 +251,8 @@ const EMICalculator = ({ darkMode, setDarkMode }) => {
                       name="interestRate"
                       value={formData.interestRate}
                       onChange={handleChange}
-                      min="1"
-                      max="30"
+                      min={limits.interestRate.min}
+                      max={limits.interestRate.max}
                       step="0.1"
                       className="input-field"
                     />
@@ -220,8 +260,8 @@ const EMICalculator = ({ darkMode, setDarkMode }) => {
                   <div className="mt-2">
                     <input
                       type="range"
-                      min="1"
-                      max="20"
+                      min={limits.interestRate.min}
+                      max={limits.interestRate.max}
                       step="0.25"
                       value={formData.interestRate}
                       onChange={handleChange}
@@ -247,8 +287,8 @@ const EMICalculator = ({ darkMode, setDarkMode }) => {
                         name="loanTenure"
                         value={formData.loanTenure}
                         onChange={handleChange}
-                        min="1"
-                        max={formData.tenureType === 'years' ? 30 : 360}
+                        min={limits.loanTenure[formData.tenureType].min}
+                        max={limits.loanTenure[formData.tenureType].max}
                         className="input-field"
                       />
                     </div>
@@ -267,8 +307,8 @@ const EMICalculator = ({ darkMode, setDarkMode }) => {
                   <div className="mt-2">
                     <input
                       type="range"
-                      min="1"
-                      max={formData.tenureType === 'years' ? 30 : 360}
+                      min={limits.loanTenure[formData.tenureType].min}
+                      max={limits.loanTenure[formData.tenureType].max}
                       value={formData.loanTenure}
                       onChange={handleChange}
                       name="loanTenure"
@@ -276,7 +316,7 @@ const EMICalculator = ({ darkMode, setDarkMode }) => {
                     />
                     <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
                       <span>1 {formData.tenureType === 'years' ? 'Year' : 'Month'}</span>
-                      <span>{formData.tenureType === 'years' ? '30 Years' : '360 Months'}</span>
+                      <span>{formData.tenureType === 'years' ? '30 Years' : '365 Months'}</span>
                     </div>
                   </div>
                 </div>
@@ -284,23 +324,49 @@ const EMICalculator = ({ darkMode, setDarkMode }) => {
             </div>
             
             {/* Results Summary */}
-            <div className="card p-6 mt-6">
-              <h3 className="text-xl font-medium text-primary dark:text-white mb-4">Results Summary</h3>
+            <div className="card p-4 sm:p-6 mt-4 sm:mt-6 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-all duration-300">
+              <h3 className="text-lg sm:text-xl font-medium text-primary dark:text-white mb-3 sm:mb-4 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                Results Summary
+              </h3>
               
-              <div className="space-y-4">
-                <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Monthly EMI</p>
-                  <p className="text-2xl font-bold text-primary dark:text-white">₹{results.emi.toLocaleString('en-IN')}</p>
+              <div className="space-y-4 sm:space-y-5">
+                <div className="flex items-center">
+                  <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mr-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Monthly EMI</p>
+                    <p className="text-xl sm:text-2xl font-bold text-primary dark:text-white">₹{results.emi.toLocaleString('en-IN')}</p>
+                  </div>
                 </div>
                 
-                <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Total Interest Payable</p>
-                  <p className="text-2xl font-bold text-red-600 dark:text-red-400">₹{results.totalInterest.toLocaleString('en-IN')}</p>
+                <div className="flex items-center">
+                  <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mr-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Total Interest Payable</p>
+                    <p className="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400">₹{results.totalInterest.toLocaleString('en-IN')}</p>
+                  </div>
                 </div>
                 
-                <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Total Payment</p>
-                  <p className="text-3xl font-bold text-secondary">₹{results.totalPayment.toLocaleString('en-IN')}</p>
+                <div className="pt-4 sm:pt-5 mt-2 border-t border-gray-200 dark:border-gray-700 flex items-center">
+                  <div className="w-10 h-10 rounded-full bg-secondary/20 dark:bg-secondary/30 flex items-center justify-center mr-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Total Payment</p>
+                    <p className="text-2xl sm:text-3xl font-bold text-secondary">₹{results.totalPayment.toLocaleString('en-IN')}</p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -309,9 +375,14 @@ const EMICalculator = ({ darkMode, setDarkMode }) => {
           {/* Chart and Table */}
           <div className="lg:col-span-2 space-y-6">
             {/* Chart */}
-            <div className="card p-6">
-              <h3 className="text-xl font-medium text-primary dark:text-white mb-4">Payment Breakdown</h3>
-              <div className="h-80 flex items-center justify-center">
+            <div className="card p-4 sm:p-6 mb-3 sm:mb-6 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-all duration-300">
+              <h3 className="text-lg sm:text-xl font-medium text-primary dark:text-white mb-3 sm:mb-4 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+                </svg>
+                Payment Breakdown
+              </h3>
+              <div className="h-80 sm:h-96 flex items-center justify-center">
                 <div className="w-full max-w-md">
                   <Pie data={chartData} />
                 </div>
@@ -335,8 +406,13 @@ const EMICalculator = ({ darkMode, setDarkMode }) => {
             </div>
             
             {/* Table */}
-            <div className="card p-6">
-              <h3 className="text-xl font-medium text-primary dark:text-white mb-4">Amortization Schedule</h3>
+            <div className="card p-4 sm:p-6 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-all duration-300">
+              <h3 className="text-lg sm:text-xl font-medium text-primary dark:text-white mb-3 sm:mb-4 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                Amortization Schedule
+              </h3>
               
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">

@@ -202,8 +202,13 @@ const BudgetPlanner = ({ darkMode, setDarkMode }) => {
           {/* Income and Expense Form */}
           <div className="lg:col-span-1 space-y-6">
             {/* Income Card */}
-            <div className="card p-6">
-              <h3 className="text-xl font-medium text-primary dark:text-white mb-4">Monthly Income</h3>
+            <div className="card p-4 sm:p-6 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-all duration-300">
+              <h3 className="text-lg sm:text-xl font-medium text-primary dark:text-white mb-3 sm:mb-4 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Monthly Income
+              </h3>
               
               <div>
                 <label htmlFor="income" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -221,8 +226,11 @@ const BudgetPlanner = ({ darkMode, setDarkMode }) => {
             </div>
             
             {/* Add Expense Card */}
-            <div className="card p-6">
-              <h3 className="text-xl font-medium text-primary dark:text-white mb-4">
+            <div className="card p-4 sm:p-6 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-all duration-300">
+              <h3 className="text-lg sm:text-xl font-medium text-primary dark:text-white mb-3 sm:mb-4 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
                 {editingId ? 'Edit Expense' : 'Add New Expense'}
               </h3>
               
@@ -283,28 +291,54 @@ const BudgetPlanner = ({ darkMode, setDarkMode }) => {
             </div>
             
             {/* Budget Summary */}
-            <div className="card p-6">
-              <h3 className="text-xl font-medium text-primary dark:text-white mb-4">Budget Summary</h3>
+            <div className="card p-4 sm:p-6 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-all duration-300">
+              <h3 className="text-lg sm:text-xl font-medium text-primary dark:text-white mb-3 sm:mb-4 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                Budget Summary
+              </h3>
               
-              <div className="space-y-4">
-                <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Total Income</p>
-                  <p className="text-2xl font-bold text-primary dark:text-white">₹{income.toLocaleString('en-IN')}</p>
+              <div className="space-y-4 sm:space-y-5">
+                <div className="flex items-center">
+                  <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mr-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Total Income</p>
+                    <p className="text-xl sm:text-2xl font-bold text-primary dark:text-white">₹{income.toLocaleString('en-IN')}</p>
+                  </div>
                 </div>
                 
-                <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Total Expenses</p>
-                  <p className="text-2xl font-bold text-red-600 dark:text-red-400">₹{summary.totalExpenses.toLocaleString('en-IN')}</p>
+                <div className="flex items-center">
+                  <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mr-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Total Expenses</p>
+                    <p className="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400">₹{summary.totalExpenses.toLocaleString('en-IN')}</p>
+                  </div>
                 </div>
                 
-                <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Balance (Savings)</p>
-                  <p className={`text-3xl font-bold ${summary.balance >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                    ₹{summary.balance.toLocaleString('en-IN')}
-                  </p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    Savings Rate: {summary.savingsRate.toFixed(1)}%
-                  </p>
+                <div className="pt-4 sm:pt-5 mt-2 border-t border-gray-200 dark:border-gray-700 flex items-center">
+                  <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mr-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Balance (Savings)</p>
+                    <p className={`text-2xl sm:text-3xl font-bold ${summary.balance >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                      ₹{summary.balance.toLocaleString('en-IN')}
+                    </p>
+                    <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      Savings Rate: {summary.savingsRate.toFixed(1)}%
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -313,11 +347,17 @@ const BudgetPlanner = ({ darkMode, setDarkMode }) => {
           {/* Chart and Expense List */}
           <div className="lg:col-span-2 space-y-6">
             {/* Chart */}
-            <div className="card p-6">
-              <h3 className="text-xl font-medium text-primary dark:text-white mb-4">Expense Breakdown</h3>
+            <div className="card p-4 sm:p-6 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-all duration-300">
+              <h3 className="text-lg sm:text-xl font-medium text-primary dark:text-white mb-3 sm:mb-4 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+                </svg>
+                Expense Breakdown
+              </h3>
               
               {expenses.length > 0 ? (
-                <div className="h-80 flex items-center justify-center">
+                <div className="h-80 sm:h-96 flex items-center justify-center">
                   <div className="w-full max-w-md">
                     <Doughnut data={chartData} options={chartOptions} />
                   </div>
@@ -330,8 +370,13 @@ const BudgetPlanner = ({ darkMode, setDarkMode }) => {
             </div>
             
             {/* Expense List */}
-            <div className="card p-6">
-              <h3 className="text-xl font-medium text-primary dark:text-white mb-4">Expense List</h3>
+            <div className="card p-4 sm:p-6 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-all duration-300">
+              <h3 className="text-lg sm:text-xl font-medium text-primary dark:text-white mb-3 sm:mb-4 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                Expense List
+              </h3>
               
               {expenses.length > 0 ? (
                 <div className="overflow-x-auto">
@@ -384,8 +429,13 @@ const BudgetPlanner = ({ darkMode, setDarkMode }) => {
             </div>
             
             {/* Budget Tips */}
-            <div className="card p-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800">
-              <h3 className="text-xl font-medium text-primary dark:text-white mb-4">Budget Tips</h3>
+            <div className="card p-4 sm:p-6 bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-900/20 dark:to-blue-800/20 rounded-xl border border-blue-100 dark:border-blue-800 shadow-sm hover:shadow-md transition-all duration-300">
+              <h3 className="text-lg sm:text-xl font-medium text-primary dark:text-white mb-3 sm:mb-4 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Budget Tips
+              </h3>
               
               <ul className="space-y-2 text-gray-700 dark:text-gray-300 list-disc pl-5">
                 <li>Follow the 50-30-20 rule: Spend 50% on needs, 30% on wants, and 20% on savings or debt repayment.</li>

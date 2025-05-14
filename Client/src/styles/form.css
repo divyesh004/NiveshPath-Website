@@ -2,7 +2,11 @@
 
 /* Form Container */
 .form-container {
-  @apply max-w-md mx-auto bg-white dark:bg-[#1E1E1E] rounded-xl shadow-lg p-8 border border-gray-100 dark:border-gray-800 transition-all duration-300;
+  @apply max-w-md mx-auto bg-white dark:bg-[#1E1E1E] rounded-xl shadow-lg p-8 border border-gray-100 dark:border-gray-800 transition-all duration-300 hover:shadow-xl;
+}
+
+.glass-form-container {
+  @apply max-w-md mx-auto bg-white bg-opacity-20 backdrop-filter backdrop-blur-lg rounded-xl p-8 border border-white border-opacity-20 transition-all duration-300;
 }
 
 /* Form Section */
@@ -39,12 +43,20 @@
 
 /* Success state */
 .input-field.success {
-  @apply border-green-500 dark:border-green-400 focus:border-green-500 dark:focus:border-green-400 focus:ring-green-500 dark:focus:ring-green-400;
+  @apply border-secondary dark:border-secondary focus:border-secondary dark:focus:border-secondary focus:ring-secondary dark:focus:ring-secondary;
 }
 
 /* Form Buttons */
 .form-buttons {
   @apply flex justify-end space-x-3 mt-8;
+}
+
+.form-button-primary {
+  @apply bg-secondary text-[#1A1A1A] py-3 px-5 rounded-lg font-semibold transition duration-300 hover:bg-[#00B370] focus:outline-none focus:ring-2 focus:ring-secondary focus:ring-opacity-50;
+}
+
+.form-button-secondary {
+  @apply bg-transparent border-2 border-secondary text-secondary py-3 px-5 rounded-lg font-semibold transition duration-300 hover:bg-secondary hover:text-[#1A1A1A] focus:outline-none focus:ring-2 focus:ring-secondary focus:ring-opacity-50;
 }
 
 /* Floating Labels */

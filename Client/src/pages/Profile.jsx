@@ -319,8 +319,24 @@ const Profile = ({ darkMode, setDarkMode }) => {
     handleSubmit(e);
   };
 
+  // Check if screen is mobile size
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  // Add event listener for window resize
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    // Initial check
+    handleResize();
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   return (
-    <div className="min-h-screen bg-background dark:bg-dark-bg">
+    <div className="min-h-screen bg-background dark:bg-dark-bg overflow-hidden">
       {/* Header/Navigation */}
       <header className="bg-white dark:bg-primary shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -345,13 +361,14 @@ const Profile = ({ darkMode, setDarkMode }) => {
                   </svg>
                 )}
               </button>
-              <Link to="/" className="text-sm sm:text-base text-gray-700 dark:text-gray-300 hover:text-secondary">
+              {/* Hide text links on mobile */}
+              <Link to="/" className="hidden md:block text-sm sm:text-base text-gray-700 dark:text-gray-300 hover:text-secondary">
                 Home
               </Link>
-              <Link to="/dashboard" className="text-sm sm:text-base text-gray-700 dark:text-gray-300 hover:text-secondary">
+              <Link to="/dashboard" className="hidden md:block text-sm sm:text-base text-gray-700 dark:text-gray-300 hover:text-secondary">
                 Dashboard
               </Link>
-              <Link to="/chatbot" className="text-sm sm:text-base text-gray-700 dark:text-gray-300 hover:text-secondary">
+              <Link to="/chatbot" className="hidden md:block text-sm sm:text-base text-gray-700 dark:text-gray-300 hover:text-secondary">
                 AI Advisor - {APP_NAME}
               </Link>
             </div>
@@ -359,8 +376,8 @@ const Profile = ({ darkMode, setDarkMode }) => {
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto py-6 sm:py-8 px-4 sm:px-6 lg:px-8">
+      {/* Main Content - adjusted padding for mobile */}
+      <main className="max-w-7xl mx-auto py-6 sm:py-8 px-4 sm:px-6 lg:px-8 pb-24 md:pb-8">
         <div className="bg-white dark:bg-gray-800 shadow overflow-hidden rounded-lg">
           {/* Profile Header */}
           <div className="px-4 py-5 sm:px-6 border-b border-gray-200 dark:border-gray-700">
@@ -592,6 +609,38 @@ const Profile = ({ darkMode, setDarkMode }) => {
           </div>
         </div>
       </main>
+
+      {/* Mobile Bottom Navigation - Only visible on mobile */}
+      {isMobile && (
+        <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-primary shadow-lg border-t border-gray-200 dark:border-gray-700 z-10">
+          <div className="flex justify-around items-center h-16">
+            <Link to="/" className="flex flex-col items-center justify-center text-gray-600 dark:text-gray-300 hover:text-secondary dark:hover:text-accent">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+              </svg>
+              <span className="text-xs mt-1">Home</span>
+            </Link>
+            <Link to="/dashboard" className="flex flex-col items-center justify-center text-gray-600 dark:text-gray-300 hover:text-secondary dark:hover:text-accent">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              <span className="text-xs mt-1">Dashboard</span>
+            </Link>
+            <Link to="/profile" className="flex flex-col items-center justify-center text-secondary dark:text-accent">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+              <span className="text-xs mt-1">Profile</span>
+            </Link>
+            <Link to="/chatbot" className="flex flex-col items-center justify-center text-gray-600 dark:text-gray-300 hover:text-secondary dark:hover:text-accent">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+              </svg>
+              <span className="text-xs mt-1">AI Advisor</span>
+            </Link>
+          </div>
+        </nav>
+      )}
     </div>
   );
 };
