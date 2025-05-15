@@ -1,0 +1,320 @@
+/* Onboarding Styles - Duolingo Inspired */
+
+/* Container animations */
+.onboarding-container {
+  position: relative;
+  transition: all 0.3s ease-in-out;
+}
+
+.animate-slide {
+  animation: slide-in 0.5s ease-out;
+}
+
+@keyframes slide-in {
+  0% {
+    opacity: 0.7;
+    transform: translateX(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Form animations */
+.form-fade {
+  animation: fade-in 0.4s ease-out;
+}
+
+@keyframes fade-in {
+  0% {
+    opacity: 0.5;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Character styles */
+.character-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 0.5rem;
+  height: 90px;
+  position: relative;
+}
+
+.character {
+  width: 65px;
+  height: 65px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Owl character (default) */
+.character.owl {
+  background-color: #58cc02; /* Duolingo green */
+  position: relative;
+}
+
+.character.owl:before {
+  content: '🦉';
+  font-size: 32px;
+}
+
+/* Fox character */
+.character.fox {
+  background-color: #ff9600; /* Orange */
+  position: relative;
+}
+
+.character.fox:before {
+  content: '🦊';
+  font-size: 32px;
+}
+
+/* Character animations */
+.character-bounce {
+  animation: bounce 0.5s ease;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-15px);
+  }
+}
+
+/* Speech bubble */
+.character-speech-bubble {
+  position: absolute;
+  top: -60px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 8px 12px;
+  min-width: 220px;
+  text-align: center;
+  font-size: 0.85rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  z-index: 10;
+}
+
+/* Speech bubble arrow */
+.character-speech-bubble:after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-top: 10px solid white;
+}
+
+/* Typing effect */
+.typing-effect {
+  display: inline-block;
+  overflow: hidden;
+  border-right: 2px solid #58cc02;
+  white-space: nowrap;
+  animation: typing 3s steps(40, end), blink-caret 0.75s step-end infinite;
+  width: 100%;
+}
+
+@keyframes typing {
+  from { width: 0 }
+  to { width: 100% }
+}
+
+@keyframes blink-caret {
+  from, to { border-color: transparent }
+  50% { border-color: #58cc02 }
+}
+
+/* Confetti animation */
+.confetti-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 100;
+  overflow: hidden;
+}
+
+.confetti {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  top: -10px;
+  animation: confetti-fall 3s linear forwards;
+  transform: rotate(0deg);
+}
+
+@keyframes confetti-fall {
+  0% {
+    top: -10px;
+    transform: rotate(0deg);
+  }
+  100% {
+    top: 100%;
+    transform: rotate(360deg);
+  }
+}
+
+/* Custom colors for the onboarding flow */
+.bg-background-pro {
+  background-color: #f8fafc;
+}
+
+.text-primary-pro {
+  color: #1e40af;
+}
+
+.text-text-pro {
+  color: #475569;
+}
+
+.bg-secondary-pro {
+  background-color: #58cc02;
+}
+
+.bg-accent-pro {
+  background-color: #46a302;
+}
+
+.text-secondary-pro {
+  color: #58cc02;
+}
+
+.text-accent-pro {
+  color: #ff9600;
+}
+
+.border-accent-pro {
+  border-color: #58cc02;
+}
+
+.focus\:ring-secondary-pro:focus {
+  --tw-ring-color: #58cc02;
+  --tw-ring-opacity: 0.5;
+}
+
+/* Dark mode overrides */
+.dark .bg-background-pro {
+  background-color: #1e293b;
+}
+
+.dark .text-text-pro {
+  color: #cbd5e1;
+}
+
+/* Form animations */
+.form-step-container {
+  transition: all 0.3s ease;
+}
+
+.form-fade {
+  animation: fade 0.3s ease-in-out;
+}
+
+@keyframes fade {
+  0% {
+    opacity: 0.6;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* Progress bar animations */
+.progress-bar {
+  transition: width 0.5s ease-out;
+}
+
+/* Input field animations */
+.input-field:focus {
+  transform: scale(1.02);
+  transition: all 0.2s ease;
+}
+
+/* Button animations */
+button:not(:disabled):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+/* Form navigation buttons */
+.flex.justify-between.mt-8 {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+/* Reduce vertical spacing */
+.onboarding-container > div {
+  padding: 0.5rem;
+}
+
+/* Checkbox animations */
+input[type="checkbox"]:checked + label {
+  color: #58cc02;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+  .character-speech-bubble {
+    background-color: #1f2937;
+    border-color: #374151;
+    color: #e5e7eb;
+  }
+  
+  .character-speech-bubble:after {
+    border-top-color: #1f2937;
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .character-container {
+    height: 80px;
+  }
+  
+  .character {
+    width: 50px;
+    height: 50px;
+  }
+  
+  .character.owl:before {
+    font-size: 25px;
+  }
+  
+  .character.fox:before {
+    font-size: 25px;
+  }
+  
+  .character-speech-bubble {
+    min-width: 160px;
+    font-size: 0.75rem;
+    top: -55px;
+  }
+}

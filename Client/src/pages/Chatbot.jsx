@@ -1,9 +1,911 @@
 import { useState, useRef, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import apiService from '../services/api';
+import { useAuth } from '../contexts/AuthContext'; // Import Auth Context
+import Onboarding from './Onboarding'; // Import Onboarding component
+import DOMPurify from 'dompurify'; // For sanitizing HTML
 
+const formatBotMessage = (text) => {
+  if (!text) return '';
+  
+  // Process code blocks with language detection for syntax highlighting
+  let formattedText = text.replace(/```(\w*)\n?([\s\S]*?)```/g, (match, language, codeContent) => {
+    const sanitizedCode = DOMPurify.sanitize(codeContent);
+    const lang = language ? language.trim() : '';
+    const langClass = lang ? ` language-${lang}` : '';
+    
+    return `<div class="bg-gray-100 dark:bg-gray-900 rounded-md p-3 my-3 overflow-x-auto font-mono text-sm border border-gray-200 dark:border-gray-700 shadow-sm">
+      <div class="flex justify-between items-center mb-2">
+        <span class="text-xs text-gray-800 dark:text-white font-medium">${lang ? lang.toUpperCase() : 'CODE'}</span>
+        <button class="text-xs text-gray-800 hover:text-gray-900 dark:text-white dark:hover:text-white transition-colors" title="Copy code">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+            <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/>
+            <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/>
+          </svg>
+        </button>
+      </div>
+      <pre class="m-0 p-0 bg-transparent border-0${langClass}"><code class="text-gray-800 dark:text-white${langClass}">${sanitizedCode}</code></pre>
+    </div>`;
+  });
+  
+  // Process inline code with improved styling
+  formattedText = formattedText.replace(/`([^`]+)`/g, (match, code) => {
+    return `<code class="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded font-mono text-sm text-gray-800 dark:text-white border border-gray-200 dark:border-gray-700">${code}</code>`;
+  });
+  
+  // Special handler for investment tables with enhanced styling
+  const isInvestmentTable = (match) => {
+    // Check if this looks like an investment table by examining the header row
+    const headerRow = match.split('\n')[0] || '';
+    const headerCells = headerRow.split('|').map(cell => cell.trim().toLowerCase());
+    
+    // Look for investment-related keywords in the header
+    const investmentKeywords = ['investment', 'fund', 'risk', 'returns', 'minimum'];
+    return investmentKeywords.some(keyword => 
+      headerCells.some(cell => cell.includes(keyword))
+    );
+  };
+  
+  // Process investment tables with premium styling - improved regex to detect tables within paragraphs
+  formattedText = formattedText.replace(/(?:^|\n)(\|(.+)\|\s*\n\|\s*[-:\s]+\|\s*\n((\|.+\|\s*\n)+))/g, (match, tableContent) => {
+    // Extract table content
+    const tableRows = match.split('\n').filter(row => row.trim() !== '');
+    
+    if (tableRows.length < 2) return match; // Not a valid table
+    
+    const headerRow = tableRows[0];
+    const alignmentRow = tableRows[1];
+    const dataRows = tableRows.slice(2);
+    
+    // Extract header cells
+    const headerCells = headerRow.split('|').slice(1, -1).map(cell => cell.trim());
+    
+    // Extract alignment information
+    const alignments = alignmentRow.split('|').slice(1, -1).map(cell => {
+      const trimmed = cell.trim();
+      if (trimmed.startsWith(':') && trimmed.endsWith(':')) return 'text-center';
+      if (trimmed.endsWith(':')) return 'text-right';
+      return 'text-left';
+    });
+    
+    // Generate a unique ID for this table
+    const tableId = `table-${Math.random().toString(36).substring(2, 10)}`;
+    
+    // Check if this is an investment table
+    const isInvestmentData = isInvestmentTable(match);
+    
+    // Build table HTML with enhanced Notion-like styling
+    let tableHtml = `<div class="relative overflow-hidden my-6 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
+      <!-- Table Toolbar -->
+      <div class="flex items-center justify-between px-4 py-2 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+        <div class="flex items-center space-x-2">
+          <span class="text-xs font-medium text-gray-800 dark:text-white">Table</span>
+          <span class="text-xs text-gray-800 dark:text-white">${headerCells.length} columns</span>
+        </div>
+        <div class="flex items-center space-x-2">
+          <button class="text-xs text-gray-800 hover:text-gray-900 dark:text-white dark:hover:text-gray-200 transition-colors p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-800" title="Toggle compact view" onclick="document.getElementById('${tableId}').classList.toggle('compact-table')">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+              <path d="M1 2.5A1.5 1.5 0 0 1 2.5 1h3A1.5 1.5 0 0 1 7 2.5v3A1.5 1.5 0 0 1 5.5 7h-3A1.5 1.5 0 0 1 1 5.5v-3zm8 0A1.5 1.5 0 0 1 10.5 1h3A1.5 1.5 0 0 1 15 2.5v3A1.5 1.5 0 0 1 13.5 7h-3A1.5 1.5 0 0 1 9 5.5v-3zm-8 8A1.5 1.5 0 0 1 2.5 9h3A1.5 1.5 0 0 1 7 10.5v3A1.5 1.5 0 0 1 5.5 15h-3A1.5 1.5 0 0 1 1 13.5v-3zm8 0A1.5 1.5 0 0 1 10.5 9h3a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5h-3A1.5 1.5 0 0 1 9 13.5v-3z"/>
+            </svg>
+          </button>
+          <button class="text-xs text-gray-800 hover:text-gray-900 dark:text-white dark:hover:text-gray-200 transition-colors p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-800" title="Copy table data" onclick="navigator.clipboard.writeText(document.getElementById('${tableId}').innerText)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+              <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/>
+              <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+      
+      <!-- Table Content -->
+      <div class="overflow-x-auto">
+        <table id="${tableId}" class="min-w-full border-collapse bg-white dark:bg-gray-800 table-fixed md:table-auto">`;
+    
+    // Add header row with improved styling
+    tableHtml += '<thead>';
+    tableHtml += `<tr class="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">`;
+    headerCells.forEach((cell, index) => {
+      const alignment = alignments[index] || 'text-left';
+      tableHtml += `<th class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 font-semibold ${alignment} text-gray-800 dark:text-white text-sm uppercase tracking-wider sticky top-0 bg-gray-50 dark:bg-gray-900 z-10">${cell}</th>`;
+    });
+    tableHtml += '</tr></thead>';
+    
+    // Add data rows with single background color and hover effects
+    tableHtml += '<tbody class="divide-y divide-gray-200 dark:divide-gray-700">';
+    dataRows.forEach((row, rowIndex) => {
+      const cells = row.split('|').slice(1, -1).map(cell => cell.trim());
+      const rowClass = 'bg-white dark:bg-gray-800';
+      tableHtml += `<tr class="${rowClass} hover:bg-gray-100 dark:hover:bg-gray-700 group transition-colors">`;
+      
+      cells.forEach((cell, index) => {
+        const alignment = alignments[index] || 'text-left';
+        
+        // Simple cell formatting with consistent colors
+        let formattedCell = cell;
+        
+        // Check if cell contains HTML content (like bullet points)
+        const containsHTML = /<[a-z][\s\S]*>/i.test(cell);
+        
+        // If cell already has HTML, use it directly with minimal formatting
+        if (containsHTML) {
+          // Apply basic styling to the container but preserve the HTML content
+          formattedCell = `<div class="table-cell-content">${cell}</div>`;
+        } else {
+          // Apply consistent styling for all cells
+          formattedCell = `<span class="font-medium">${cell}</span>`;
+        }
+            
+        // Process bullet points within cells (lines starting with - or *)
+        if (cell.includes('\n')) {
+          const lines = cell.split('\n');
+          const hasBulletPoints = lines.some(line => /^\s*[-*]\s+/.test(line.trim()));
+          
+          if (hasBulletPoints) {
+            // Create a proper unordered list for bullet points
+            formattedCell = '<ul class="list-disc pl-5 py-1 space-y-1.5">';
+            let inSubList = false;
+            
+            lines.forEach(line => {
+              const trimmedLine = line.trim();
+              if (/^\s*[-*]\s+/.test(trimmedLine)) {
+                // This is a bullet point
+                const bulletContent = trimmedLine.replace(/^\s*[-*]\s+/, '');
+                
+                // Check if bullet content has sub-bullets (indented bullets)
+                if (bulletContent.includes('  - ') || bulletContent.includes('  * ')) {
+                  // Handle sub-bullets by creating a nested structure
+                  const mainContent = bulletContent.split('  - ')[0].split('  * ')[0].trim();
+                  
+                  // Close previous sublist if open
+                  if (inSubList) {
+                    formattedCell += '</ul></li>';
+                    inSubList = false;
+                  }
+                  
+                  // Start new main bullet with nested list
+                  formattedCell += `<li class="mb-1.5 font-medium">${mainContent}`;
+                  
+                  // Add sub-bullets with proper indentation
+                  const subBullets = bulletContent.match(/\s\s[-*]\s+([^\n]+)/g) || [];
+                  if (subBullets.length > 0) {
+                    formattedCell += `<ul class="list-circle pl-4 mt-1.5 space-y-1">`;
+                    inSubList = true;
+                    
+                    subBullets.forEach(subBullet => {
+                      const subContent = subBullet.replace(/^\s*[-*]\s+/, '').trim();
+                      formattedCell += `<li class="text-gray-800 dark:text-white">${subContent}</li>`;
+                    });
+                  }
+                } else {
+                  // Close previous sublist if open
+                  if (inSubList) {
+                    formattedCell += '</ul></li>';
+                    inSubList = false;
+                  }
+                  
+                  // Regular bullet point
+                  formattedCell += `<li class="font-medium text-gray-800 dark:text-white">${bulletContent}</li>`;
+                }
+              } else if (trimmedLine) {
+                // Close previous sublist if open
+                if (inSubList) {
+                  formattedCell += '</ul></li>';
+                  inSubList = false;
+                }
+                
+                // Regular paragraph
+                formattedCell += `<li class="!list-none font-medium text-gray-800 dark:text-white">${trimmedLine}</li>`;
+              }
+            });
+            
+            // Close any open sublists
+            if (inSubList) {
+              formattedCell += '</ul></li>';
+            }
+            
+            formattedCell += '</ul>';
+          } else {
+            // For multi-line text without bullet points, format as paragraphs
+            formattedCell = '<div class="space-y-2">';
+                lines.forEach(line => {
+                  if (line.trim()) {
+                    formattedCell += `<p class="font-medium text-gray-800 dark:text-white">${line.trim()}</p>`;
+                  }
+                });
+            formattedCell += '</div>';
+          }
+        }
+        
+        tableHtml += `<td class="px-4 py-3 whitespace-normal border-t-0 ${alignment} text-gray-800 dark:text-white group-hover:text-gray-900 dark:group-hover:text-gray-200 transition-colors">
+          <div class="table-cell ${cell.includes('\n') ? 'space-y-1.5' : ''}">${formattedCell}</div>
+        </td>`;
+      });
+      tableHtml += '</tr>';
+    });
+    tableHtml += '</tbody></table></div>';
+    
+    // Add CSS for compact view toggle and investment cell styling
+    tableHtml += `
+      <style>
+        #${tableId}.compact-table td { padding: 0.5rem 0.75rem; font-size: 0.875rem; }
+        #${tableId}.compact-table th { padding: 0.5rem 0.75rem; font-size: 0.75rem; }
+        
+        /* Table cell styling */
+        .table-cell { width: 100%; }
+        .table-cell-content { width: 100%; }
+        .table-cell ul { margin-top: 0.5rem; margin-bottom: 0.5rem; padding-left: 1.5rem; }
+        .table-cell li { margin-bottom: 0.375rem; }
+        .table-cell p { margin-bottom: 0.5rem; }
+        
+        /* Bullet list styling */
+        .table-cell ul { list-style-position: outside; }
+        .table-cell ul.list-disc { list-style-type: disc; }
+        .table-cell ul.list-circle { list-style-type: circle; }
+        .table-cell li.!list-none { list-style-type: none; }
+        .table-cell .space-y-1 > * { margin-top: 0.25rem; margin-bottom: 0.25rem; }
+          .table-cell .space-y-1\.5 > * { margin-top: 0.375rem; margin-bottom: 0.375rem; }
+        .table-cell .space-y-2 > * { margin-top: 0.5rem; margin-bottom: 0.5rem; }
+        .table-cell .space-y-0\.5 > * { margin-top: 0.125rem; margin-bottom: 0.125rem; }
+        .table-cell .pl-4 { padding-left: 1rem; }
+        .table-cell .pl-5 { padding-left: 1.25rem; }
+        .table-cell .mt-1 { margin-top: 0.25rem; }
+          .table-cell .mt-1\.5 { margin-top: 0.375rem; }
+        .table-cell .mb-1 { margin-bottom: 0.25rem; }
+          .table-cell .mb-1\.5 { margin-bottom: 0.375rem; }
+      </style>
+    `;
+    
+    // Add footer for tables
+    if (isInvestmentData) {
+      tableHtml += `
+        <div class="px-4 py-3 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-800 dark:text-white">
+          <div class="flex items-center justify-between">
+            <span>Data as of ${new Date().toLocaleDateString('en-US', {month: 'long', year: 'numeric'})}</span>
+            <div class="flex space-x-2">
+              <button class="text-gray-800 hover:text-gray-900 dark:text-white dark:hover:text-gray-200 transition-colors font-medium text-xs flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Download CSV
+              </button>
+              <button class="text-gray-800 hover:text-gray-900 dark:text-white dark:hover:text-gray-200 transition-colors font-medium text-xs flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                </svg>
+                Share
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    
+    tableHtml += '</div>';
+    
+    return tableHtml;
+  });
+  
+  // Handle tables with no header row (simplified tables) - improved regex to detect tables within paragraphs
+  formattedText = formattedText.replace(/(?:^|\n)(\|(.+)\|\s*\n(\|.+\|\s*\n)+)/gm, (match, tableContent) => {
+    if (tableContent.includes('|-')) return match; // Skip if already processed by the previous regex
+    
+    // Extract table content
+    const tableRows = match.split('\n').filter(row => row.trim() !== '');
+    if (tableRows.length < 1) return match;
+    
+    // Generate a unique ID for this table
+    const tableId = `table-${Math.random().toString(36).substring(2, 10)}`;
+    
+    // Calculate number of columns from first row
+    const firstRow = tableRows[0];
+    const columnCount = firstRow.split('|').filter(cell => cell.trim() !== '').length;
+    
+    // Check if this is an investment table
+    const isInvestmentData = isInvestmentTable(match);
+    
+    // Build table HTML with enhanced Notion-like styling
+    let tableHtml = `<div class="relative overflow-hidden my-6 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
+      <!-- Table Toolbar -->
+      <div class="flex items-center justify-between px-4 py-2 ${isInvestmentData ? 'bg-blue-50 dark:bg-indigo-950' : 'bg-gray-50 dark:bg-gray-900'} border-b border-gray-200 dark:border-gray-700">
+        <div class="flex items-center space-x-2">
+          ${isInvestmentData ? `
+            <span class="flex items-center text-xs font-medium text-gray-800 dark:text-white">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              Investment Options
+            </span>
+          ` : `
+            <span class="text-xs font-medium text-gray-800 dark:text-white">Table</span>
+          `}
+          <span class="text-xs text-gray-800 dark:text-white">${columnCount} columns</span>
+        </div>
+        <div class="flex items-center space-x-2">
+          <button class="text-xs text-gray-800 hover:text-gray-900 dark:text-white dark:hover:text-gray-200 transition-colors p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-800" title="Toggle compact view" onclick="document.getElementById('${tableId}').classList.toggle('compact-table')">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+              <path d="M1 2.5A1.5 1.5 0 0 1 2.5 1h3A1.5 1.5 0 0 1 7 2.5v3A1.5 1.5 0 0 1 5.5 7h-3A1.5 1.5 0 0 1 1 5.5v-3zm8 0A1.5 1.5 0 0 1 10.5 1h3A1.5 1.5 0 0 1 15 2.5v3A1.5 1.5 0 0 1 13.5 7h-3A1.5 1.5 0 0 1 9 5.5v-3zm-8 8A1.5 1.5 0 0 1 2.5 9h3A1.5 1.5 0 0 1 7 10.5v3A1.5 1.5 0 0 1 5.5 15h-3A1.5 1.5 0 0 1 1 13.5v-3zm8 0A1.5 1.5 0 0 1 10.5 9h3a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5h-3A1.5 1.5 0 0 1 9 13.5v-3z"/>
+            </svg>
+          </button>
+          <button class="text-xs text-gray-800 hover:text-gray-900 dark:text-white dark:hover:text-gray-200 transition-colors p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-800" title="Copy table data" onclick="navigator.clipboard.writeText(document.getElementById('${tableId}').innerText)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+              <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/>
+              <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+      
+      <!-- Table Content -->
+      <div class="overflow-x-auto">
+        <table id="${tableId}" class="min-w-full border-collapse bg-white dark:bg-gray-800 table-fixed md:table-auto">
+    
+    <!-- Add all rows as data rows with improved styling -->
+    <tbody class="divide-y divide-gray-200 dark:divide-gray-700">`;
+    
+    // First row gets special styling as a pseudo-header
+    const firstRowCells = tableRows[0].split('|').slice(1, -1).map(cell => cell.trim());
+    tableHtml += `<tr class="${isInvestmentData ? 'bg-blue-50 dark:bg-indigo-950' : 'bg-gray-50 dark:bg-gray-900'} border-b border-gray-200 dark:border-gray-700">`;
+    firstRowCells.forEach(cell => {
+      tableHtml += `<th class="px-4 py-3 whitespace-normal font-semibold text-sm uppercase tracking-wider ${isInvestmentData ? 'text-gray-800 dark:text-white' : 'text-gray-800 dark:text-white'}">${cell}</th>`;
+    });
+    tableHtml += '</tr>';
+    
+    // Add remaining rows with consistent background color and hover effects
+    tableRows.slice(1).forEach((row, rowIndex) => {
+      const cells = row.split('|').slice(1, -1).map(cell => cell.trim());
+      const rowClass = 'bg-white dark:bg-gray-800';
+      tableHtml += `<tr class="${rowClass} ${isInvestmentData ? 'hover:bg-blue-50/70 dark:hover:bg-indigo-900/50' : 'hover:bg-blue-50 dark:hover:bg-gray-700'} group transition-colors">`;
+      
+      cells.forEach((cell, index) => {
+        // Get alignment from first row if available
+        const alignment = index < alignments.length ? alignments[index] : 'text-left';
+        // Simple cell formatting with consistent colors
+        let formattedCell = cell;
+        
+        // Check if cell contains HTML content (like bullet points)
+        const containsHTML = /<[a-z][\s\S]*>/i.test(cell);
+        
+        // If cell already has HTML, use it directly with minimal formatting
+        if (containsHTML) {
+          // Apply basic styling to the container but preserve the HTML content
+          formattedCell = `<div class="table-cell-content">${cell}</div>`;
+        } else {
+          // Apply consistent styling for all cells
+          formattedCell = `<span class="font-medium">${cell}</span>`;
+        }
+            
+        // Process bullet points within cells (lines starting with - or *)
+        if (cell.includes('\n')) {
+          const lines = cell.split('\n');
+          const hasBulletPoints = lines.some(line => /^\s*[-*]\s+/.test(line.trim()));
+          
+          if (hasBulletPoints) {
+            // Create a proper unordered list for bullet points
+            formattedCell = '<ul class="list-disc pl-5 py-1 space-y-1.5">';
+            let inSubList = false;
+            
+            lines.forEach(line => {
+              const trimmedLine = line.trim();
+              if (/^\s*[-*]\s+/.test(trimmedLine)) {
+                // This is a bullet point
+                const bulletContent = trimmedLine.replace(/^\s*[-*]\s+/, '');
+                
+                // Check if bullet content has sub-bullets (indented bullets)
+                if (bulletContent.includes('  - ') || bulletContent.includes('  * ')) {
+                  // Handle sub-bullets by creating a nested structure
+                  const mainContent = bulletContent.split('  - ')[0].split('  * ')[0].trim();
+                  
+                  // Close previous sublist if open
+                  if (inSubList) {
+                    formattedCell += '</ul></li>';
+                    inSubList = false;
+                  }
+                  
+                  // Start new main bullet with nested list
+                  formattedCell += `<li class="mb-1.5 font-medium">${mainContent}`;
+                  
+                  // Add sub-bullets with proper indentation
+                  const subBullets = bulletContent.match(/\s\s[-*]\s+([^\n]+)/g) || [];
+                  if (subBullets.length > 0) {
+                    formattedCell += `<ul class="list-circle pl-4 mt-1.5 space-y-1">`;
+                    inSubList = true;
+                    
+                    subBullets.forEach(subBullet => {
+                      const subContent = subBullet.replace(/^\s*[-*]\s+/, '').trim();
+                      formattedCell += `<li class="text-gray-800 dark:text-white">${subContent}</li>`;
+                    });
+                  }
+                } else {
+                  // Close previous sublist if open
+                  if (inSubList) {
+                    formattedCell += '</ul></li>';
+                    inSubList = false;
+                  }
+                  
+                  // Regular bullet point
+                  formattedCell += `<li class="font-medium text-gray-800 dark:text-white">${bulletContent}</li>`;
+                }
+              } else if (trimmedLine) {
+                // Close previous sublist if open
+                if (inSubList) {
+                  formattedCell += '</ul></li>';
+                  inSubList = false;
+                }
+                
+                // Regular paragraph
+                formattedCell += `<li class="!list-none font-medium text-gray-800 dark:text-white">${trimmedLine}</li>`;
+              }
+            });
+            
+            // Close any open sublists
+            if (inSubList) {
+              formattedCell += '</ul></li>';
+            }
+            
+            formattedCell += '</ul>';
+          } else {
+            // For multi-line text without bullet points, format as paragraphs
+            formattedCell = '<div class="space-y-2">';
+                lines.forEach(line => {
+                  if (line.trim()) {
+                    formattedCell += `<p class="font-medium text-gray-800 dark:text-white">${line.trim()}</p>`;
+                  }
+                });
+            formattedCell += '</div>';
+          }
+        }
+        
+        tableHtml += `<td class="px-4 py-3 whitespace-normal border-t-0 ${alignment} text-gray-800 dark:text-white group-hover:text-gray-900 dark:group-hover:text-gray-200 transition-colors">
+          <div class="table-cell ${cell.includes('\n') ? 'space-y-1.5' : ''}">${formattedCell}</div>
+        </td>`;
+      });
+      tableHtml += '</tr>';
+    });
+    
+    tableHtml += '</tbody></table></div>';
+    
+    // Add CSS for compact view toggle and investment cell styling
+    tableHtml += `
+      <style>
+        #${tableId}.compact-table td { padding: 0.5rem 0.75rem; font-size: 0.875rem; }
+        
+        /* Investment cell styling */
+        .investment-cell { width: 100%; }
+        .investment-cell-content { width: 100%; }
+        .investment-cell ul { margin-top: 0.5rem; margin-bottom: 0.5rem; padding-left: 1.5rem; }
+        .investment-cell li { margin-bottom: 0.375rem; }
+        .investment-cell p { margin-bottom: 0.5rem; }
+        
+        /* Bullet list styling */
+        .investment-cell ul { list-style-position: outside; }
+        .investment-cell ul.list-disc { list-style-type: disc; }
+        .investment-cell ul.list-circle { list-style-type: circle; }
+        .investment-cell li.!list-none { list-style-type: none; }
+        .investment-cell .space-y-1 > * { margin-top: 0.25rem; margin-bottom: 0.25rem; }
+          .investment-cell .space-y-1\.5 > * { margin-top: 0.375rem; margin-bottom: 0.375rem; }
+        .investment-cell .space-y-2 > * { margin-top: 0.5rem; margin-bottom: 0.5rem; }
+        .investment-cell .space-y-0\.5 > * { margin-top: 0.125rem; margin-bottom: 0.125rem; }
+        .investment-cell .pl-4 { padding-left: 1rem; }
+        .investment-cell .pl-5 { padding-left: 1.25rem; }
+        .investment-cell .mt-1 { margin-top: 0.25rem; }
+          .investment-cell .mt-1\.5 { margin-top: 0.375rem; }
+        .investment-cell .mb-1 { margin-bottom: 0.25rem; }
+          .investment-cell .mb-1\.5 { margin-bottom: 0.375rem; }
+      </style>
+    `;
+    
+    // Add footer for tables
+    if (isInvestmentData) {
+      tableHtml += `
+        <div class="px-4 py-3 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-800 dark:text-white">
+          <div class="flex items-center justify-between">
+            <span>Data as of ${new Date().toLocaleDateString('en-US', {month: 'long', year: 'numeric'})}</span>
+            <div class="flex space-x-2">
+              <button class="text-gray-800 hover:text-gray-900 dark:text-white dark:hover:text-gray-200 transition-colors font-medium text-xs flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Download CSV
+              </button>
+              <button class="text-gray-800 hover:text-gray-900 dark:text-white dark:hover:text-gray-200 transition-colors font-medium text-xs flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                </svg>
+                Share
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    
+    tableHtml += '</div>';
+    
+    return tableHtml;
+  });
+  
+  // Process headings (h1 to h6) with improved styling
+  formattedText = formattedText.replace(/^(#{1,6})\s+(.+)$/gm, (match, hashes, content) => {
+    const level = hashes.length;
+    const fontSize = {
+      1: 'text-2xl md:text-3xl',
+      2: 'text-xl md:text-2xl',
+      3: 'text-lg md:text-xl',
+      4: 'text-base md:text-lg',
+      5: 'text-sm md:text-base',
+      6: 'text-xs md:text-sm'
+    }[level];
+    
+    return `<h${level} class="font-bold ${fontSize} my-4 border-b border-gray-200 dark:border-gray-700 pb-2 text-gray-800 dark:text-white">${content}</h${level}>`;
+  });
+  
+  // Process bullet points with improved styling and indentation
+  formattedText = formattedText.replace(/^(\s*)[-*]\s+(.+)$/gm, (match, indent, content) => {
+    const indentClass = indent.length ? `ml-${indent.length * 4}` : '';
+    return `<div class="flex items-start my-1.5 ${indentClass}"><span class="mr-2 mt-1 text-primary dark:text-secondary">•</span><span class="text-gray-800 dark:text-white">${content}</span></div>`;
+  });
+  
+  // Process numbered lists with improved styling and indentation
+  formattedText = formattedText.replace(/^(\s*)(\d+)\.\s+(.+)$/gm, (match, indent, number, content) => {
+    const indentClass = indent.length ? `ml-${indent.length * 4}` : '';
+    return `<div class="flex items-start my-1.5 ${indentClass}"><span class="mr-2 min-w-[1.5rem] font-medium text-primary dark:text-secondary">${number}.</span><span class="text-gray-800 dark:text-white">${content}</span></div>`;
+  });
+  
+  // Process bold text with improved styling
+  formattedText = formattedText.replace(/\*\*([^*]+)\*\*/g, '<strong class="font-bold text-primary dark:text-secondary">$1</strong>');
+  
+  // Process italic text with improved styling
+  formattedText = formattedText.replace(/\*([^*]+)\*/g, '<em class="italic text-gray-800 dark:text-white">$1</em>');
+  
+  // Process strikethrough text with improved styling
+  formattedText = formattedText.replace(/~~([^~]+)~~/g, '<span class="line-through text-gray-800 dark:text-white">$1</span>');
+  
+  // Process blockquotes with improved styling
+  formattedText = formattedText.replace(/^>\s+(.+)$/gm, (match, content) => {
+    return `<blockquote class="border-l-4 border-primary dark:border-secondary pl-4 py-2 my-3 italic text-gray-800 dark:text-white bg-gray-50 dark:bg-gray-800 rounded-r-md">${content}</blockquote>`;
+  });
+  
+  // Process horizontal rules with improved styling
+  formattedText = formattedText.replace(/^---+$/gm, '<hr class="my-6 border-t-2 border-gray-300 dark:border-gray-600 rounded-full" />');
+  
+  // Process links with improved styling and hover effects
+  formattedText = formattedText.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-gray-800 dark:text-white hover:underline hover:text-gray-900 dark:hover:text-gray-200 transition-colors duration-200 font-medium">$1</a>');
+  
+  // Process callouts/notes with special styling
+  formattedText = formattedText.replace(/^\[!NOTE\]\s*\n(.+)$/gm, (match, content) => {
+    return `<div class="bg-blue-50 dark:bg-blue-900/30 border-l-4 border-blue-500 text-gray-800 dark:text-white p-4 my-4 rounded-r-md">
+      <div class="flex items-center">
+        <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
+        <p>${content}</p>
+      </div>
+    </div>`;
+  });
+  
+  // Process warning callouts with special styling
+  formattedText = formattedText.replace(/^\[!WARNING\]\s*\n(.+)$/gm, (match, content) => {
+    return `<div class="bg-yellow-50 dark:bg-yellow-900/30 border-l-4 border-yellow-500 text-gray-800 dark:text-white p-4 my-4 rounded-r-md">
+      <div class="flex items-center">
+        <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>
+        <p>${content}</p>
+      </div>
+    </div>`;
+  });
+  
+  // Process tables within paragraphs with enhanced Notion-like styling
+  // First handle tables with header rows
+  formattedText = formattedText.replace(/(<p[^>]*>)([\s\S]*?)(\|(.+)\|\s*\n\|\s*[-:\s]+\|\s*\n((\|.+\|\s*\n)+))([\s\S]*?)(<\/p>)/g, (match, openTag, beforeTable, tableMatch, headerRow, dataRows, afterTable, closeTag) => {
+    // Extract the table content
+    const tableContent = tableMatch;
+    
+    // Process the table using the existing table formatting logic
+    const processedTable = formattedText.replace(new RegExp(tableContent.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), (match) => {
+      // Use the existing table regex replacement logic
+      return match.replace(/\|(.+)\|\s*\n\|\s*[-:\s]+\|\s*\n((\|.+\|\s*\n)+)/g, (tableMatch) => {
+        // Extract table content
+        const tableRows = tableMatch.split('\n').filter(row => row.trim() !== '');
+        
+        if (tableRows.length < 2) return tableMatch; // Not a valid table
+        
+        const headerRow = tableRows[0];
+        const alignmentRow = tableRows[1];
+        const dataRows = tableRows.slice(2);
+        
+        // Extract header cells
+        const headerCells = headerRow.split('|').slice(1, -1).map(cell => cell.trim());
+        
+        // Extract alignment information
+        const alignments = alignmentRow.split('|').slice(1, -1).map(cell => {
+          const trimmed = cell.trim();
+          if (trimmed.startsWith(':') && trimmed.endsWith(':')) return 'text-center';
+          if (trimmed.endsWith(':')) return 'text-right';
+          return 'text-left';
+        });
+        
+        // Generate a unique ID for this table
+        const tableId = `table-${Math.random().toString(36).substring(2, 10)}`;
+        
+        // Check if this is an investment table
+        const isInvestmentData = isInvestmentTable(tableMatch);
+        
+        // Build table HTML with enhanced Notion-like styling
+        let tableHtml = `<div class="relative overflow-hidden my-6 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
+          <!-- Table Toolbar -->
+          <div class="flex items-center justify-between px-4 py-2 ${isInvestmentData ? 'bg-blue-50 dark:bg-indigo-950' : 'bg-gray-50 dark:bg-gray-900'} border-b border-gray-200 dark:border-gray-700">
+            <div class="flex items-center space-x-2">
+              ${isInvestmentData ? `
+                <span class="flex items-center text-xs font-medium text-gray-800 dark:text-white">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                  Investment Options
+                </span>
+              ` : `
+                <span class="text-xs font-medium text-gray-800 dark:text-white">Table</span>
+              `}
+              <span class="text-xs text-gray-800 dark:text-white">${headerCells.length} columns</span>
+            </div>
+            <div class="flex items-center space-x-2">
+              <button class="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-200 dark:hover:text-white transition-colors p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-800" title="Toggle compact view" onclick="document.getElementById('${tableId}').classList.toggle('compact-table')">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                  <path d="M1 2.5A1.5 1.5 0 0 1 2.5 1h3A1.5 1.5 0 0 1 7 2.5v3A1.5 1.5 0 0 1 5.5 7h-3A1.5 1.5 0 0 1 1 5.5v-3zm8 0A1.5 1.5 0 0 1 10.5 1h3A1.5 1.5 0 0 1 15 2.5v3A1.5 1.5 0 0 1 13.5 7h-3A1.5 1.5 0 0 1 9 5.5v-3zm-8 8A1.5 1.5 0 0 1 2.5 9h3A1.5 1.5 0 0 1 7 10.5v3A1.5 1.5 0 0 1 5.5 15h-3A1.5 1.5 0 0 1 1 13.5v-3zm8 0A1.5 1.5 0 0 1 10.5 9h3a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5h-3A1.5 1.5 0 0 1 9 13.5v-3z"/>
+                </svg>
+              </button>
+              <button class="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white transition-colors p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700" title="Copy table data" onclick="navigator.clipboard.writeText(document.getElementById('${tableId}').innerText)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                  <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/>
+                  <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/>
+                </svg>
+              </button>
+              ${isInvestmentData ? `
+              <button class="text-xs text-gray-800 hover:text-gray-900 dark:text-white dark:hover:text-gray-200 transition-colors p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-800" title="Compare investments">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                  <path d="M5 1a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2H5zm0 1h6a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/>
+                  <path d="M7 5.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1zm0 3a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1zm0 3a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1z"/>
+                  <path d="M3 3.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1zm0 3a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1zm0 3a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1z"/>
+                </svg>
+              </button>
+              ` : ''}
+            </div>
+          </div>
+          
+          <!-- Table Content -->
+          <div class="overflow-x-auto">
+            <table id="${tableId}" class="min-w-full border-collapse bg-white dark:bg-gray-800 table-fixed md:table-auto">`;
+        
+        // Add header row with improved styling
+        tableHtml += '<thead>';
+        tableHtml += `<tr class="${isInvestmentData ? 'bg-blue-50 dark:bg-blue-900/20' : 'bg-gray-50 dark:bg-gray-700'} border-b border-gray-200 dark:border-gray-600">`;
+        headerCells.forEach((cell, index) => {
+          const alignment = alignments[index] || 'text-left';
+          tableHtml += `<th class="px-4 py-3 border-b border-gray-200 dark:border-gray-600 font-semibold ${alignment} ${isInvestmentData ? 'text-gray-800 dark:text-white' : 'text-gray-800 dark:text-white'} text-sm uppercase tracking-wider sticky top-0 ${isInvestmentData ? 'bg-blue-50 dark:bg-blue-900/20' : 'bg-gray-50 dark:bg-gray-700'} z-10">${cell}</th>`;
+        });
+        tableHtml += '</tr></thead>';
+        
+        // Add data rows with alternating row colors and improved hover effects
+        tableHtml += '<tbody class="divide-y divide-gray-200 dark:divide-gray-700">';
+        dataRows.forEach((row, rowIndex) => {
+          const cells = row.split('|').slice(1, -1).map(cell => cell.trim());
+          const rowClass = rowIndex % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-900';
+          tableHtml += `<tr class="${rowClass} ${isInvestmentData ? 'hover:bg-blue-50/70 dark:hover:bg-blue-900/30' : 'hover:bg-blue-50 dark:hover:bg-blue-900/20'} group transition-colors">`;
+          
+          cells.forEach((cell, index) => {
+            const alignment = alignments[index] || 'text-left';
+            
+            // Special formatting for investment data
+            let formattedCell = cell;
+            
+            if (isInvestmentData) {
+              // Check if cell contains HTML content (like bullet points)
+              const containsHTML = /<[a-z][\s\S]*>/i.test(cell);
+              
+              // If cell already has HTML, use it directly with minimal formatting
+              if (containsHTML) {
+                // Apply basic styling to the container but preserve the HTML content
+                formattedCell = `<div class="investment-cell-content">${cell}</div>`;
+              } else {
+                // Format risk level with color indicators
+                if (cell.toLowerCase().includes('high')) {
+                  formattedCell = `<span class="inline-flex items-center font-medium"><span class="w-2 h-2 rounded-full bg-red-500 mr-2"></span>${cell}</span>`;
+                } else if (cell.toLowerCase().includes('medium')) {
+                  formattedCell = `<span class="inline-flex items-center font-medium"><span class="w-2 h-2 rounded-full bg-yellow-500 mr-2"></span>${cell}</span>`;
+                } else if (cell.toLowerCase().includes('low')) {
+                  formattedCell = `<span class="inline-flex items-center font-medium"><span class="w-2 h-2 rounded-full bg-green-500 mr-2"></span>${cell}</span>`;
+                }
+                
+                // Format percentage returns
+                if (cell.includes('%')) {
+                  formattedCell = `<span class="font-medium text-gray-800 dark:text-white">${cell}</span>`;
+                }
+                
+                // Format currency values
+                if (cell.includes('₹')) {
+                  formattedCell = `<span class="font-medium">${cell}</span>`;
+                }
+                
+                // Process bullet points within cells (lines starting with - or *)
+                if (cell.includes('\n')) {
+                  const lines = cell.split('\n');
+                  const hasBulletPoints = lines.some(line => /^\s*[-*]\s+/.test(line.trim()));
+                  
+                  if (hasBulletPoints) {
+                    // Create a proper unordered list for bullet points
+                    formattedCell = '<ul class="list-disc pl-5 py-1 space-y-1.5">';
+                    let inSubList = false;
+                    
+                    lines.forEach(line => {
+                      const trimmedLine = line.trim();
+                      if (/^\s*[-*]\s+/.test(trimmedLine)) {
+                        // This is a bullet point
+                        const bulletContent = trimmedLine.replace(/^\s*[-*]\s+/, '');
+                        
+                        // Check if bullet content has sub-bullets (indented bullets)
+                        if (bulletContent.includes('  - ') || bulletContent.includes('  * ')) {
+                          // Handle sub-bullets by creating a nested structure
+                          const mainContent = bulletContent.split('  - ')[0].split('  * ')[0].trim();
+                          
+                          // Close previous sublist if open
+                          if (inSubList) {
+                            formattedCell += '</ul></li>';
+                            inSubList = false;
+                          }
+                          
+                          // Start new main bullet with nested list
+                          formattedCell += `<li class="mb-1.5 font-medium">${mainContent}`;
+                          
+                          // Add sub-bullets with proper indentation
+                          const subBullets = bulletContent.match(/\s\s[-*]\s+([^\n]+)/g) || [];
+                          if (subBullets.length > 0) {
+                            formattedCell += `<ul class="list-circle pl-4 mt-1.5 space-y-1">`;
+                            inSubList = true;
+                            
+                            subBullets.forEach(subBullet => {
+                              const subContent = subBullet.replace(/^\s*[-*]\s+/, '').trim();
+                              formattedCell += `<li class="text-gray-800 dark:text-white">${subContent}</li>`;
+                            });
+                          }
+                        } else {
+                          // Close previous sublist if open
+                          if (inSubList) {
+                            formattedCell += '</ul></li>';
+                            inSubList = false;
+                          }
+                          
+                          // Regular bullet point
+                          formattedCell += `<li class="font-medium">${bulletContent}</li>`;
+                        }
+                      } else if (trimmedLine) {
+                        // Close previous sublist if open
+                        if (inSubList) {
+                          formattedCell += '</ul></li>';
+                          inSubList = false;
+                        }
+                        
+                        // Regular paragraph
+                        formattedCell += `<li class="!list-none font-medium">${trimmedLine}</li>`;
+                      }
+                    });
+                    
+                    // Close any open sublists
+                    if (inSubList) {
+                      formattedCell += '</ul></li>';
+                    }
+                    
+                    formattedCell += '</ul>';
+                  } else {
+                    // For multi-line text without bullet points, format as paragraphs
+                    formattedCell = '<div class="space-y-2">';
+                    lines.forEach(line => {
+                      if (line.trim()) {
+                        formattedCell += `<p class="font-medium text-gray-800 dark:text-white">${line.trim()}</p>`;
+                      }
+                    });
+                    formattedCell += '</div>';
+                  }
+                }
+              }
+            }
+            
+            tableHtml += `<td class="px-4 py-3 whitespace-normal border-t-0 ${alignment} text-gray-800 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-gray-100 transition-colors">
+              <div class="investment-cell ${cell.includes('\n') ? 'space-y-1.5' : ''}">${formattedCell}</div>
+            </td>`;
+          });
+          tableHtml += '</tr>';
+        });
+        tableHtml += '</tbody></table></div>';
+        
+        // Add CSS for compact view toggle and investment cell styling
+        tableHtml += `
+          <style>
+            #${tableId}.compact-table td { padding: 0.5rem 0.75rem; font-size: 0.875rem; }
+            #${tableId}.compact-table th { padding: 0.5rem 0.75rem; font-size: 0.75rem; }
+            
+            /* Investment cell styling */
+            .investment-cell { width: 100%; }
+            .investment-cell-content { width: 100%; }
+            .investment-cell ul { margin-top: 0.5rem; margin-bottom: 0.5rem; padding-left: 1.5rem; }
+            .investment-cell li { margin-bottom: 0.375rem; }
+            .investment-cell p { margin-bottom: 0.5rem; }
+            
+            /* Bullet list styling */
+            .investment-cell ul { list-style-position: outside; }
+            .investment-cell ul.list-disc { list-style-type: disc; }
+            .investment-cell ul.list-circle { list-style-type: circle; }
+            .investment-cell li.!list-none { list-style-type: none; }
+            .investment-cell .space-y-1 > * { margin-top: 0.25rem; margin-bottom: 0.25rem; }
+          .investment-cell .space-y-1\.5 > * { margin-top: 0.375rem; margin-bottom: 0.375rem; }
+            .investment-cell .space-y-2 > * { margin-top: 0.5rem; margin-bottom: 0.5rem; }
+            .investment-cell .space-y-0\.5 > * { margin-top: 0.125rem; margin-bottom: 0.125rem; }
+            .investment-cell .pl-4 { padding-left: 1rem; }
+            .investment-cell .pl-5 { padding-left: 1.25rem; }
+            .investment-cell .mt-1 { margin-top: 0.25rem; }
+          .investment-cell .mt-1\.5 { margin-top: 0.375rem; }
+            .investment-cell .mb-1 { margin-bottom: 0.25rem; }
+          .investment-cell .mb-1\.5 { margin-bottom: 0.375rem; }
+          </style>
+        `;
+        
+        // Add footer for investment tables
+        if (isInvestmentData) {
+          tableHtml += `
+            <div class="px-4 py-3 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-300">
+              <div class="flex items-center justify-between">
+                <span>Data as of ${new Date().toLocaleDateString('en-US', {month: 'long', year: 'numeric'})}</span>
+                <div class="flex space-x-2">
+                  <button class="text-gray-800 hover:text-gray-900 dark:text-white dark:hover:text-gray-200 transition-colors font-medium text-xs flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Download CSV
+                  </button>
+                  <button class="text-gray-800 hover:text-gray-900 dark:text-white dark:hover:text-gray-200 transition-colors font-medium text-xs flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                    </svg>
+                    Share
+                  </button>
+                </div>
+              </div>
+            </div>
+          `;
+        }
+        
+        tableHtml += '</div>';
+        
+        return tableHtml;
+      });
+    });
+    
+    // Return the processed table within the paragraph
+    return `${openTag}${beforeTable}${processedTable}${afterTable}${closeTag}`;
+  });
+  
+  // Process paragraphs (add spacing between paragraphs)
+  formattedText = formattedText.replace(/\n\n/g, '</p><p class="my-3 text-gray-800 dark:text-gray-200">');
+  
+  // Wrap in paragraph tags if not already wrapped
+  if (!formattedText.startsWith('<')) {
+    formattedText = `<p class="text-gray-800 dark:text-gray-200">${formattedText}</p>`;
+  }
+  
+  // Sanitize the formatted text and return it wrapped in a div with proper styling
+  const sanitizedHtml = DOMPurify.sanitize(formattedText);
+  
+  return (
+    <div 
+      dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
+      className="whitespace-pre-wrap prose dark:prose-invert max-w-none overflow-x-auto"
+    />
+  );
+};// End of formatBotMessage function
+
+// Chatbot component
+
+// Chatbot component
 const Chatbot = ({ darkMode, setDarkMode }) => {
+  const { currentUser, isAuthenticated, onboardingCompleted } = useAuth(); // Get user info and onboarding status
+  const navigate = useNavigate();
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const [messages, setMessages] = useState([
     { id: 1, text: 'Hello! I am NiveshPath\'s AI Financial Advisor. You can ask me questions about investments, savings, budgeting, or any financial topic.', isBot: true },
   ]);
@@ -23,11 +925,30 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
   const [chatHistory, setChatHistory] = useState([]);
   const messagesEndRef = useRef(null);
 
-  // Fetch chat history when component mounts
+  // Fetch chat history when component mounts or user changes
   useEffect(() => {
-    // First try to load from localStorage
-    const savedMessages = localStorage.getItem('chatMessages');
-    const savedHistory = localStorage.getItem('chatHistory');
+    // Redirect to login if not authenticated
+    if (!isAuthenticated) {
+      toast.info('कृपया चैटबॉट का उपयोग करने के लिए लॉगिन करें');
+      navigate('/login');
+      return;
+    }
+    
+    // Check if user has completed onboarding
+    if (!onboardingCompleted) {
+      setShowOnboarding(true);
+    } else {
+      setShowOnboarding(false);
+    }
+    
+    // Get user-specific keys for localStorage
+    const userKey = currentUser?.id || 'guest';
+    const messagesKey = `chatMessages_${userKey}`;
+    const historyKey = `chatHistory_${userKey}`;
+    
+    // First try to load from localStorage with user-specific keys
+    const savedMessages = localStorage.getItem(messagesKey);
+    const savedHistory = localStorage.getItem(historyKey);
     
     if (savedMessages && savedHistory) {
       try {
@@ -42,91 +963,170 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
       // If no local data, fetch from API
       fetchChatHistory();
     }
-  }, []);
+  }, [currentUser, isAuthenticated, navigate, onboardingCompleted]);
 
-  // Function to fetch chat history from the backend
+  // Function to fetch chat history from the backend for the current user
   const fetchChatHistory = async () => {
+    if (!isAuthenticated) return;
+    
     try {
       setLoading(true);
-      const response = await apiService.chatbot.getHistory();
+      console.log('Fetching chat history for user:', currentUser?.id);
       
-      if (response.data && Array.isArray(response.data)) {
-        // If we have history, replace the initial message with the history
-        if (response.data.length > 0) {
-          const formattedMessages = response.data.map((msg, index) => ({
-            id: index + 1,
-            text: msg.content || msg.text,
-            isBot: msg.sender === 'bot' || msg.isBot
-          }));
+      // Get user-specific chat history using the user ID
+      let response;
+      try {
+        // First try to get user-specific history if we have a user ID
+        if (currentUser?.id) {
+          response = await apiService.chatbot.getUserHistory(currentUser.id);
+          console.log('User-specific history response:', response);
+        } else {
+          // Fallback to general history if no user ID
+          response = await apiService.chatbot.getHistory();
+          console.log('General history response:', response);
+        }
+      } catch (apiError) {
+        console.error('API error when fetching chat history:', apiError);
+        // Create a fallback response with empty data array
+        response = { data: [] };
+      }
+      
+      // Get user-specific keys for localStorage
+      const userKey = currentUser?.id || 'guest';
+      const messagesKey = `chatMessages_${userKey}`;
+      const historyKey = `chatHistory_${userKey}`;
+      
+      // Ensure response.data is an array
+      const chatData = Array.isArray(response.data) ? response.data : [];
+      console.log('Chat data length:', chatData.length);
+      
+      // If we have history, process it
+      if (chatData.length > 0) {
+        // Format messages for display
+        const formattedMessages = chatData.map((msg, index) => ({
+          id: index + 1,
+          text: msg.content || msg.text || '',
+          isBot: msg.sender === 'bot' || msg.isBot || false,
+          userId: msg.userId || currentUser?.id || 'guest',
+          timestamp: msg.timestamp || new Date().toISOString()
+        }));
+        
+        console.log('Formatted messages:', formattedMessages.length);
+        setMessages(formattedMessages);
+        
+        // Save to localStorage with user-specific key
+        localStorage.setItem(messagesKey, JSON.stringify(formattedMessages));
+        
+        // Create chat history entries from unique conversations
+        const uniqueChats = [];
+        
+        // Extract user messages to use for chat titles
+        const userMessages = chatData.filter(msg => 
+          (msg.sender === 'user' || !msg.isBot) && 
+          (!msg.userId || msg.userId === currentUser?.id)
+        );
+        
+        console.log('User messages found:', userMessages.length);
+        
+        if (userMessages.length > 0) {
+          // Use first user message as title for the first chat
+          const firstUserMsg = userMessages[0];
+          const firstChatTitle = firstUserMsg.content || firstUserMsg.text || 'New Chat';
+          const formattedFirstTitle = firstChatTitle.length > 20 ? 
+            firstChatTitle.substring(0, 20) + '...' : firstChatTitle;
           
-          setMessages(formattedMessages);
+          // Add first chat to history
+          uniqueChats.push({
+            id: 1,
+            title: formattedFirstTitle,
+            date: new Date().toLocaleDateString(),
+            messages: chatData,
+            userId: currentUser?.id || 'guest'
+          });
           
-          // Save to localStorage
-          localStorage.setItem('chatMessages', JSON.stringify(formattedMessages));
-          
-          // Create chat history entries from unique conversations
-          const uniqueChats = [];
-          
-          // Group messages by conversation or create default entry
-          if (response.data.length > 0) {
-            // Extract first user message from each conversation to use as title
-            const userMessages = response.data.filter(msg => msg.sender === 'user' || !msg.isBot);
+          // If there are multiple user messages with significant gap, create separate chat entries
+          let lastIndex = 0;
+          for (let i = 1; i < userMessages.length; i++) {
+            // Find the index of this user message in the original data array
+            const currentIndex = chatData.findIndex(msg => 
+              (msg.id === userMessages[i].id) || 
+              (msg.content === userMessages[i].content && msg.text === userMessages[i].text)
+            );
             
-            if (userMessages.length > 0) {
-              // Use first user message as title for the chat
-              const firstUserMsg = userMessages[0];
-              const chatTitle = firstUserMsg.content || firstUserMsg.text;
-              const formattedTitle = chatTitle.length > 20 ? chatTitle.substring(0, 20) + '...' : chatTitle;
+            // If index not found, skip this message
+            if (currentIndex === -1) continue;
+            
+            // If messages are far apart (more than 4 messages between), consider it a new conversation
+            if (currentIndex - lastIndex > 4) {
+              const chatTitle = userMessages[i].content || userMessages[i].text || 'New Chat';
+              const formattedTitle = chatTitle.length > 20 ? 
+                chatTitle.substring(0, 20) + '...' : chatTitle;
               
               uniqueChats.push({
-                id: 1,
+                id: uniqueChats.length + 1,
                 title: formattedTitle,
                 date: new Date().toLocaleDateString(),
-                messages: response.data
-              });
-              
-              // If there are multiple user messages with significant gap, create separate chat entries
-              let lastIndex = 0;
-              for (let i = 1; i < userMessages.length; i++) {
-                const currentIndex = response.data.findIndex(msg => 
-                  msg.id === userMessages[i].id || 
-                  (msg.content === userMessages[i].content && msg.text === userMessages[i].text)
-                );
-                
-                // If messages are far apart (more than 4 messages between), consider it a new conversation
-                if (currentIndex - lastIndex > 4) {
-                  const chatTitle = userMessages[i].content || userMessages[i].text;
-                  const formattedTitle = chatTitle.length > 20 ? chatTitle.substring(0, 20) + '...' : chatTitle;
-                  
-                  uniqueChats.push({
-                    id: uniqueChats.length + 1,
-                    title: formattedTitle,
-                    date: new Date().toLocaleDateString(),
-                    messages: response.data.slice(lastIndex, currentIndex + 1)
-                  });
-                }
-                
-                lastIndex = currentIndex;
-              }
-            } else {
-              // Fallback if no user messages found
-              uniqueChats.push({
-                id: 1,
-                title: 'Financial Advice',
-                date: new Date().toLocaleDateString(),
-                messages: response.data
+                messages: chatData.slice(lastIndex, currentIndex + 1),
+                userId: currentUser?.id || 'guest'
               });
             }
+            
+            lastIndex = currentIndex;
           }
-          
-          setChatHistory(uniqueChats);
-          // Save chat history to localStorage
-          localStorage.setItem('chatHistory', JSON.stringify(uniqueChats));
+        } else {
+          // Fallback if no user messages found
+          uniqueChats.push({
+            id: 1,
+            title: 'Financial Advice',
+            date: new Date().toLocaleDateString(),
+            messages: chatData,
+            userId: currentUser?.id || 'guest'
+          });
         }
+        
+        console.log('Unique chats created:', uniqueChats.length);
+        setChatHistory(uniqueChats);
+        
+        // Save chat history to localStorage with user-specific key
+        localStorage.setItem(historyKey, JSON.stringify(uniqueChats));
+      } else {
+        // If no chat history found, set default welcome message
+        console.log('No chat history found, using welcome message');
+        setMessages([welcomeMessage]);
+        localStorage.setItem(messagesKey, JSON.stringify([welcomeMessage]));
+        
+        // Create a default chat history entry
+        const defaultChat = {
+          id: 1,
+          title: 'New Financial Chat',
+          date: new Date().toLocaleDateString(),
+          messages: [welcomeMessage],
+          userId: currentUser?.id || 'guest'
+        };
+        
+        setChatHistory([defaultChat]);
+        localStorage.setItem(historyKey, JSON.stringify([defaultChat]));
       }
     } catch (error) {
-      console.error('Error fetching chat history:', error);
-      // Don't show error toast for history fetch, just keep the default message
+      console.error('Error in fetchChatHistory function:', error);
+      // Set default values in case of error
+      const userKey = currentUser?.id || 'guest';
+      const messagesKey = `chatMessages_${userKey}`;
+      const historyKey = `chatHistory_${userKey}`;
+      
+      setMessages([welcomeMessage]);
+      localStorage.setItem(messagesKey, JSON.stringify([welcomeMessage]));
+      
+      const defaultChat = {
+        id: 1,
+        title: 'New Financial Chat',
+        date: new Date().toLocaleDateString(),
+        messages: [welcomeMessage],
+        userId: currentUser?.id || 'guest'
+      };
+      
+      setChatHistory([defaultChat]);
+      localStorage.setItem(historyKey, JSON.stringify([defaultChat]));
     } finally {
       setLoading(false);
     }
@@ -134,65 +1134,262 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
   
   // Function to load a specific chat from history
   const loadChatFromHistory = (chat) => {
+    if (!isAuthenticated) {
+      toast.info('कृपया चैट इतिहास देखने के लिए लॉगिन करें');
+      navigate('/login');
+      return;
+    }
+    
+    console.log('Loading chat from history:', chat);
+    
     if (chat && chat.messages && Array.isArray(chat.messages)) {
-      // Map the messages to the format expected by the component
-      const formattedMessages = chat.messages.map((msg, index) => ({
-        id: index + 1,
-        text: msg.content || msg.text,
-        isBot: msg.sender === 'bot' || msg.isBot
-      }));
+      // Verify this chat belongs to the current user
+      if (chat.userId && chat.userId !== currentUser?.id) {
+        toast.error('You do not have permission to access this chat');
+        return;
+      }
       
-      setMessages(formattedMessages);
-      // Save to localStorage
-      localStorage.setItem('chatMessages', JSON.stringify(formattedMessages));
-      
-      setInput('');
-      setError(null);
-      toast.info(`Loaded chat: ${chat.title}`);
+      try {
+        // Map the messages to the format expected by the component
+        const formattedMessages = chat.messages.map((msg, index) => ({
+          id: index + 1,
+          text: msg.content || msg.text || '',
+          isBot: msg.sender === 'bot' || msg.isBot || false,
+          userId: msg.userId || currentUser?.id || 'guest',
+          timestamp: msg.timestamp || new Date().toISOString()
+        }));
+        
+        console.log('Formatted messages for display:', formattedMessages.length);
+        
+        // Only set messages if we have valid formatted messages
+        if (formattedMessages.length > 0) {
+          setMessages(formattedMessages);
+          
+          // Get user-specific key for localStorage
+          const userKey = currentUser?.id || 'guest';
+          const messagesKey = `chatMessages_${userKey}`;
+          
+          // Save to localStorage with user-specific key
+          localStorage.setItem(messagesKey, JSON.stringify(formattedMessages));
+          
+          setInput('');
+          setError(null);
+          toast.info(`चैट लोड की गई: ${chat.title}`);
+        } else {
+          // If no messages found, show error
+          throw new Error('No messages found in selected chat');
+        }
+      } catch (error) {
+        console.error('Error formatting chat messages:', error);
+        toast.error('Problem loading chat history');
+        
+        // Set default welcome message as fallback
+        setMessages([welcomeMessage]);
+        
+        // Get user-specific key for localStorage
+        const userKey = currentUser?.id || 'guest';
+        const messagesKey = `chatMessages_${userKey}`;
+        
+        // Save default message to localStorage
+        localStorage.setItem(messagesKey, JSON.stringify([welcomeMessage]));
+      }
     } else {
+      console.error('Invalid chat object:', chat);
       toast.error('Could not load chat history');
+      
+      // Set default welcome message as fallback
+      setMessages([welcomeMessage]);
+    }
+  };
+  
+  // Function to delete a specific chat from history
+  const deleteChat = async (chatId, event) => {
+    event.stopPropagation(); // Prevent triggering the parent button click
+    
+    if (!isAuthenticated) {
+      toast.info('चैट इतिहास प्रबंधित करने के लिए कृपया लॉगिन करें');
+      navigate('/login');
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      console.log('Deleting chat with ID:', chatId);
+      
+      // If user is authenticated, delete from server too
+      if (currentUser?.id) {
+        try {
+          await apiService.chatbot.deleteChat(chatId);
+          console.log('Chat deleted from server successfully');
+        } catch (apiError) {
+          console.error('Error deleting chat from server:', apiError);
+          // Continue with local deletion even if server deletion fails
+        }
+      }
+      
+      // Remove chat from local state
+      const updatedHistory = chatHistory.filter(chat => chat.id !== chatId);
+      console.log('Updated chat history length:', updatedHistory.length);
+      setChatHistory(updatedHistory);
+      
+      // Get user-specific key for localStorage
+      const userKey = currentUser?.id || 'guest';
+      const historyKey = `chatHistory_${userKey}`;
+      
+      // Update localStorage with user-specific key
+      localStorage.setItem(historyKey, JSON.stringify(updatedHistory));
+      
+      // If this was the current active chat, reset to welcome message
+      const deletedChat = chatHistory.find(chat => chat.id === chatId);
+      if (deletedChat && messages.length > 0) {
+        // Check if current messages match the deleted chat
+        const currentFirstMsg = messages[0]?.text;
+        const deletedFirstMsg = deletedChat.messages[0]?.content || deletedChat.messages[0]?.text;
+        
+        if (currentFirstMsg === deletedFirstMsg) {
+          console.log('Resetting current chat to welcome message');
+          setMessages([welcomeMessage]);
+          
+          // Update localStorage for messages too
+          const messagesKey = `chatMessages_${userKey}`;
+          localStorage.setItem(messagesKey, JSON.stringify([welcomeMessage]));
+        }
+      }
+      
+      toast.success('Chat successfully deleted');
+    } catch (error) {
+      console.error('Error in deleteChat function:', error);
+      toast.error('Failed to delete chat. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
   
   // Function to clear chat history
-  const clearChat = () => {
-    // Reset to just the welcome message
-    setMessages([welcomeMessage]);
-    // Update localStorage
-    localStorage.setItem('chatMessages', JSON.stringify([welcomeMessage]));
+  const clearChat = async () => {
+    if (!isAuthenticated) {
+      toast.info('चैट इतिहास प्रबंधित करने के लिए कृपया लॉगिन करें');
+      navigate('/login');
+      return;
+    }
     
-    setInput('');
-    setError(null);
-    toast.info('Chat history cleared');
+    try {
+      setLoading(true);
+      console.log('Clearing all chat history');
+      
+      // If user is authenticated, clear history from server too
+      if (currentUser?.id) {
+        try {
+          await apiService.chatbot.clearAllHistory();
+          console.log('Chat history cleared from server successfully');
+        } catch (apiError) {
+          console.error('Error clearing chat history from server:', apiError);
+          // Continue with local clearing even if server clearing fails
+        }
+      }
+      
+      // Reset to just the welcome message
+      setMessages([welcomeMessage]);
+      setChatHistory([]);
+      
+      // Get user-specific key for localStorage
+      const userKey = currentUser?.id || 'guest';
+      const messagesKey = `chatMessages_${userKey}`;
+      const historyKey = `chatHistory_${userKey}`;
+      
+      // Update localStorage with user-specific key
+      localStorage.setItem(messagesKey, JSON.stringify([welcomeMessage]));
+      localStorage.setItem(historyKey, JSON.stringify([]));
+      
+      // Create a default chat entry after clearing
+      const defaultChat = {
+        id: 1,
+        title: 'नई वित्तीय चैट',
+        date: new Date().toLocaleDateString(),
+        messages: [welcomeMessage],
+        userId: currentUser?.id || 'guest'
+      };
+      
+      // Update state and localStorage with the default chat
+      setChatHistory([defaultChat]);
+      localStorage.setItem(historyKey, JSON.stringify([defaultChat]));
+      
+      setInput('');
+      setError(null);
+      setNewChat(true);
+      toast.success('Chat history successfully cleared');
+    } catch (error) {
+      console.error('Error in clearChat function:', error);
+      toast.error('Failed to clear chat history. Please try again.');
+
+      
+      // Set default welcome message as fallback
+      setMessages([welcomeMessage]);
+    } finally {
+      setLoading(false);
+    }
   };
   
   // Function to start a new chat
   const startNewChat = () => {
-    setMessages([welcomeMessage]);
-    // Update localStorage
-    localStorage.setItem('chatMessages', JSON.stringify([welcomeMessage]));
+    if (!isAuthenticated) {
+      toast.info('नई चैट शुरू करने के लिए कृपया लॉगिन करें');
+      navigate('/login');
+      return;
+    }
     
+    console.log('Starting a new chat');
+    
+    // Reset to welcome message
+    setMessages([welcomeMessage]);
+    
+    // Get user-specific keys for localStorage
+    const userKey = currentUser?.id || 'guest';
+    const messagesKey = `chatMessages_${userKey}`;
+    const historyKey = `chatHistory_${userKey}`;
+    
+    // Update localStorage with user-specific key
+    localStorage.setItem(messagesKey, JSON.stringify([welcomeMessage]));
+    
+    // Reset input and error state
     setInput('');
     setError(null);
     setNewChat(true);
     
-    // Add new chat to history
+    // Generate a unique ID for the new chat
+    const newChatId = chatHistory.length > 0 ? 
+      Math.max(...chatHistory.map(chat => chat.id)) + 1 : 1;
+    
+    // Add new chat to history with user ID
     const newChatEntry = {
-      id: chatHistory.length + 1,
-      title: 'New Financial Chat',
+      id: newChatId,
+      title: 'नई वित्तीय चैट',
       date: new Date().toLocaleDateString(),
-      messages: [welcomeMessage]
+      messages: [welcomeMessage],
+      userId: currentUser?.id || 'guest' // Add user ID to new chat
     };
+    
+    // Add new chat to the beginning of the history array
     const updatedHistory = [newChatEntry, ...chatHistory];
+    console.log('Updated chat history with new chat, total chats:', updatedHistory.length);
+    
     setChatHistory(updatedHistory);
     
-    // Update localStorage
-    localStorage.setItem('chatHistory', JSON.stringify(updatedHistory));
+    // Update localStorage with user-specific key
+    localStorage.setItem(historyKey, JSON.stringify(updatedHistory));
+    
+    toast.info('नई चैट शुरू की गई');
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (input.trim() === '') return;
+    
+    // Check if user has completed onboarding
+    if (!onboardingCompleted) {
+      setShowOnboarding(true);
+      return;
+    }
     
     // Clear any previous errors
     setError(null);
@@ -202,8 +1399,12 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
       const updatedMessages = [...messages, userMessage];
       setMessages(updatedMessages);
       
-      // Save to localStorage
-      localStorage.setItem('chatMessages', JSON.stringify(updatedMessages));
+      // Get user-specific key for localStorage
+      const userKey = currentUser?.id || 'guest';
+      const messagesKey = `chatMessages_${userKey}`;
+      
+      // Save to localStorage with user-specific key
+      localStorage.setItem(messagesKey, JSON.stringify(updatedMessages));
       
       setInput('');
       setIsTyping(true);
@@ -222,8 +1423,13 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
         const updatedMessages = [...messages, botMessage];
         setMessages(updatedMessages);
         
-        // Save messages to localStorage
-        localStorage.setItem('chatMessages', JSON.stringify(updatedMessages));
+        // Get user-specific key for localStorage
+        const userKey = currentUser?.id || 'guest';
+        const messagesKey = `chatMessages_${userKey}`;
+        const historyKey = `chatHistory_${userKey}`;
+        
+        // Save messages to localStorage with user-specific key
+        localStorage.setItem(messagesKey, JSON.stringify(updatedMessages));
         
         // Update chat title if this is a new chat
         if (newChat && chatHistory.length > 0) {
@@ -232,8 +1438,12 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
           updatedHistory[0].messages = [...updatedHistory[0].messages, userMessage, botMessage];
           setChatHistory(updatedHistory);
           
-          // Save updated history to localStorage
-          localStorage.setItem('chatHistory', JSON.stringify(updatedHistory));
+          // Get user-specific key for localStorage
+          const userKey = currentUser?.id || 'guest';
+          const historyKey = `chatHistory_${userKey}`;
+          
+          // Save updated history to localStorage with user-specific key
+          localStorage.setItem(historyKey, JSON.stringify(updatedHistory));
           
           setNewChat(false);
         } else if (chatHistory.length > 0) {
@@ -242,8 +1452,12 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
           updatedHistory[0].messages = updatedMessages;
           setChatHistory(updatedHistory);
           
-          // Save updated history to localStorage
-          localStorage.setItem('chatHistory', JSON.stringify(updatedHistory));
+          // Get user-specific key for localStorage
+          const userKey = currentUser?.id || 'guest';
+          const historyKey = `chatHistory_${userKey}`;
+          
+          // Save updated history to localStorage with user-specific key
+          localStorage.setItem(historyKey, JSON.stringify(updatedHistory));
         }
       } else {
         // Fallback in case the API response format is unexpected
@@ -263,8 +1477,12 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
       const updatedMessages = [...messages, errorMessage];
       setMessages(updatedMessages);
       
-      // Save to localStorage
-      localStorage.setItem('chatMessages', JSON.stringify(updatedMessages));
+      // Get user-specific key for localStorage
+      const userKey = currentUser?.id || 'guest';
+      const messagesKey = `chatMessages_${userKey}`;
+      
+      // Save to localStorage with user-specific key
+      localStorage.setItem(messagesKey, JSON.stringify(updatedMessages));
     } finally {
       setIsTyping(false);
     }
@@ -313,58 +1531,98 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // If onboarding needs to be shown, render the Onboarding component
+  if (showOnboarding) {
+    return <Onboarding fromChatbot={true} />;
+  }
+  
   return (
-    <div className="flex h-screen bg-background dark:bg-dark-bg overflow-hidden">
-      {/* Sidebar - optimized for mobile */}
-      <div className={`${showSidebar ? (isMobile ? 'w-48' : 'w-64') : 'w-0'} ${showSidebar && isMobile ? 'absolute z-30 h-screen' : ''} bg-primary dark:bg-primary text-white transition-all duration-300 overflow-hidden flex flex-col shadow-lg`}>
-        {/* New Chat Button - improved for mobile */}
-        <div className="p-2 sm:p-3">
+    <div className="flex h-screen bg-gray-100 dark:bg-gray-900 overflow-hidden">
+      {/* Sidebar - Notion style */}
+      <div className={`${showSidebar ? (isMobile ? 'w-64' : 'w-72') : 'w-0'} ${showSidebar && isMobile ? 'absolute z-30 h-screen' : ''} bg-light-sidebar dark:bg-dark-sidebar text-gray-800 dark:text-white transition-all duration-300 overflow-hidden flex flex-col shadow-lg border-r border-gray-200 dark:border-gray-700`}>
+        {/* New Chat Button - Notion style */}
+        <div className="p-3 sm:p-4">
           <button 
             onClick={startNewChat}
-            className="w-full flex items-center justify-center gap-1 p-1.5 sm:p-2 rounded-md border border-gray-600 hover:bg-gray-700 transition-colors text-xs sm:text-sm"
+            className="w-full flex items-center justify-center gap-2 p-3 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 text-gray-800 dark:text-white transition-colors text-sm font-medium shadow-sm"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
             <span>New Chat</span>
           </button>
         </div>
         
-        {/* Chat History - improved for mobile */}
-        <div className="flex-1 overflow-y-auto px-1 sm:px-2 py-1 sm:py-2">
-          <h3 className="text-xs uppercase text-gray-400 dark:text-gray-400 font-semibold mb-1 px-1 sm:px-2">Chat History</h3>
-          <div className="space-y-1">
-            {chatHistory.map(chat => (
+        {/* Chat History - Notion style */}
+        <div className="flex-1 overflow-y-auto px-3 py-2">
+          <h3 className="text-xs uppercase text-gray-800 dark:text-white font-semibold mb-2 px-1">Chat History</h3>
+          {!isAuthenticated ? (
+            <div className="text-center p-3 text-sm text-gray-800 dark:text-white bg-gray-100 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+              <p>Please login to view your chat history</p>
+              <Link to="/login" className="text-gray-800 dark:text-white hover:underline mt-2 block">Login</Link>
+            </div>
+          ) : loading ? (
+            <div className="text-center p-3 text-sm text-gray-800 dark:text-white bg-gray-100 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+              <p>Loading chat history...</p>
+              <div className="loader mt-2 mx-auto"></div>
+            </div>
+          ) : chatHistory.length === 0 ? (
+            <div className="text-center p-3 text-sm text-gray-800 dark:text-white bg-gray-100 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+              <p>No chat history found</p>
               <button 
-                key={chat.id}
-                className="w-full text-left p-1 sm:p-1.5 rounded-md hover:bg-gray-700 transition-colors flex items-start gap-1 overflow-hidden text-xs"
-                onClick={() => loadChatFromHistory(chat)}
+                onClick={startNewChat}
+                className="text-gray-800 dark:text-white hover:underline mt-2 block mx-auto"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                </svg>
-                <div className="overflow-hidden">
-                  <div className="text-sm truncate">{chat.title}</div>
-                  <div className="text-xs text-gray-400">{chat.date}</div>
-                </div>
+                Start a new chat
               </button>
-            ))}
-          </div>
+            </div>
+          ) : (
+            <div className="space-y-1">
+              {/* Filter chats to only show current user's chats */}
+              {chatHistory
+                .filter(chat => !chat.userId || chat.userId === currentUser?.id)
+                .map(chat => (
+                <div key={chat.id} className="relative group">
+                  <button 
+                    className="w-full text-left p-3 rounded-lg text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-start gap-3 overflow-hidden text-sm border border-transparent hover:border-gray-200 dark:hover:border-gray-600"
+                    onClick={() => loadChatFromHistory(chat)}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 flex-shrink-0 text-gray-800 dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                    </svg>
+                    <div className="overflow-hidden flex-grow">
+                      <div className="truncate">{chat.title}</div>
+                      <div className="text-xs text-gray-800 dark:text-white mt-1">{chat.date}</div>
+                    </div>
+                    <button 
+                      onClick={(e) => deleteChat(chat.id, e)}
+                      className="opacity-0 group-hover:opacity-100 p-1 rounded-full hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500 dark:text-red-400 transition-opacity"
+                      title="चैट हटाएं"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
         
-        {/* User & Settings - improved for mobile */}
-        <div className="p-1 sm:p-2 border-t border-gray-700">
-          <Link to="/dashboard" className="block p-1 sm:p-1.5 rounded-md hover:bg-gray-700 transition-colors mb-1">
-            <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        {/* User & Settings - Notion style */}
+        <div className="p-3 border-t border-gray-200 dark:border-gray-700">
+          <Link to="/dashboard" className="block p-2 rounded-lg text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors mb-1">
+            <div className="flex items-center gap-3 text-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-800 dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
               </svg>
               <span>Dashboard</span>
             </div>
           </Link>
-          <Link to="/profile" className="block p-1 sm:p-1.5 rounded-md hover:bg-gray-700 transition-colors mb-1">
-            <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <Link to="/profile" className="block p-2 rounded-lg text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors mb-1">
+            <div className="flex items-center gap-3 text-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-800 dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
               <span>Profile</span>
@@ -372,18 +1630,18 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
           </Link>
           <button 
             onClick={() => setDarkMode(!darkMode)}
-            className="w-full flex items-center gap-1 p-1 sm:p-1.5 rounded-md hover:bg-gray-700 transition-colors text-xs"
+            className="w-full flex items-center gap-3 p-2 rounded-lg text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-sm"
           >
             {darkMode ? (
               <>
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-800 dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
                 </svg>
                 <span>Light Mode</span>
               </>
             ) : (
               <>
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-800 dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
                 </svg>
                 <span>Dark Mode</span>
@@ -396,7 +1654,7 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
       {/* Overlay to close sidebar on mobile - improved */}
       {showSidebar && isMobile && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm z-20" 
+          className="fixed inset-0 bg-black bg-opacity-70 backdrop-blur-sm z-20" 
           onClick={toggleSidebar}
         />
       )}
@@ -405,114 +1663,269 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
       
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden ml-0 md:ml-0">
-        {/* Header - improved for mobile */}
-        <header className="bg-white dark:bg-primary shadow-sm border-b border-gray-200 dark:border-gray-700 flex items-center justify-between p-2 sm:p-4">
+        {/* Header - Notion style */}
+        <header className="bg-background dark:bg-dark-bg shadow-sm border-b border-gray-200 dark:border-gray-700 flex items-center justify-between p-3 md:p-4">
           <div className="flex items-center">
             <button 
               onClick={toggleSidebar}
-              className="p-2 rounded-md text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 mr-2"
+              className="p-2 rounded-md text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 mr-3"
+              aria-label="Toggle sidebar"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
-            <h1 className="text-lg sm:text-xl font-semibold text-primary dark:text-white truncate">NiveshPath AI Assistant</h1>
+            <h1 className="text-lg font-medium text-gray-800 dark:text-white truncate md:text-left text-center flex-grow md:flex-grow-0">NiveshPath AI</h1>
           </div>
-          <button 
-            onClick={clearChat}
-            className="p-2 rounded-md text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-1"
-            disabled={loading || isTyping}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-            </svg>
-            <span className="hidden sm:inline">Clear Chat</span>
-          </button>
+          <div className="flex items-center space-x-2">
+            {isAuthenticated && (
+              <span className="text-sm text-gray-800 dark:text-white mr-1 hidden md:inline">
+                {currentUser?.name || currentUser?.email || 'User'}
+              </span>
+            )}
+            {isMobile ? (
+              <button 
+                onClick={startNewChat}
+                className="p-2 rounded-md text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 transition-colors"
+                aria-label="New chat"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+              </button>
+            ) : (
+              <button 
+                onClick={clearChat}
+                className="p-2 rounded-md text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 transition-colors"
+                disabled={loading || isTyping}
+                aria-label="Clear conversation"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                <span className="hidden md:inline text-sm">Clear</span>
+              </button>
+            )}
+          </div>
         </header>
         
-        {/* Messages Container - improved padding and bottom padding for input form */}
-        <div className="flex-1 overflow-y-auto bg-white dark:bg-dark-bg p-2 sm:p-4 md:p-6 pb-20 sm:pb-24">
-          <div className="w-full max-w-3xl mx-auto space-y-4 sm:space-y-6">
-            {messages.map(message => (
-              <div 
-                key={message.id} 
-                className={`flex ${message.isBot ? 'items-start' : 'items-start justify-end'}`}
-              >
-                {message.isBot && (
-                  <div className="flex-shrink-0 h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-secondary flex items-center justify-center mr-2 sm:mr-3 mt-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714a2.25 2.25 0 01-.659 1.591L9.5 14.5M9.75 3.104c.251.023.501.05.75.082m0 0a24.301 24.301 0 014.5 0" />
-                    </svg>
+        {/* Messages Container - Notion style */}
+        <div className="flex-1 overflow-y-auto bg-background dark:bg-dark-bg pb-20 sm:pb-24">
+          {messages.map((message, index) => (
+            <div 
+              key={message.id} 
+              className={`py-6 px-4 md:px-6 ${message.isBot ? 'bg-background dark:bg-dark-bg' : 'bg-gray-50 dark:bg-gray-800'} border-b border-gray-100 dark:border-gray-800 transition-colors duration-200`}
+            >
+              <div className="w-full max-w-3xl mx-auto">
+                {/* User or AI label */}
+                <div className="flex justify-between items-center mb-2">
+                  <div className="font-medium text-sm flex items-center">
+                    <span className={`${message.isBot ? 'text-gray-800 dark:text-white' : 'text-gray-800 dark:text-white'}`}>
+                      {message.isBot ? 'NiveshPath AI' : 'You'}
+                    </span>
+                    {message.isBot && (
+                      <span className="ml-2 text-xs px-1.5 py-0.5 bg-teal-100 dark:bg-teal-900 text-teal-800 dark:text-teal-200 rounded-full">AI</span>
+                    )}
                   </div>
-                )}
-                <div 
-                  className={`max-w-[85%] sm:max-w-[75%] rounded-lg p-3 sm:p-4 shadow-sm text-sm sm:text-base ${message.isBot 
-                    ? 'bg-gray-100 dark:bg-gray-800 text-primary dark:text-gray-200' 
-                    : 'bg-secondary text-white ml-auto'}`}
-                >
-                  <p className="whitespace-pre-wrap">{message.text}</p>
+                  
+                  {/* No share button here */}
                 </div>
-                {!message.isBot && (
-                  <div className="flex-shrink-0 h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center ml-2 sm:ml-3 mt-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5 text-primary dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
+                
+                {/* Message content */}
+                {message.isBot ? (
+                  <div className="text-gray-800 dark:text-white text-sm sm:text-base prose prose-sm dark:prose-invert max-w-none notion-like-content">
+                    {formatBotMessage(message.text)}
+                    {/* Copy and Share buttons below the message */}
+                    <div className="mt-4 flex justify-end space-x-2">
+                      <button 
+                        onClick={() => {
+                          navigator.clipboard.writeText(message.text);
+                          toast.success('Copied!');
+                        }}
+                        className="text-gray-800 hover:text-gray-900 dark:text-white dark:hover:text-white transition-colors p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-sm flex items-center"
+                        title="Copy answer"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                        </svg>
+                      </button>
+                      <button 
+                        onClick={() => {
+                          if (navigator.share) {
+                            navigator.share({
+                              title: 'NiveshPath AI Answer',
+                              text: message.text
+                            }).catch(err => console.error('Share failed:', err));
+                          } else {
+                            navigator.clipboard.writeText(message.text);
+                            toast.success('Copied! Now you can share it');
+                          }
+                        }}
+                        className="text-gray-800 hover:text-gray-900 dark:text-white dark:hover:text-white transition-colors p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-sm flex items-center"
+                        title="Share answer"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-gray-800 dark:text-white text-sm sm:text-base whitespace-pre-wrap bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-100 dark:border-blue-800/30">
+                    {message.text}
                   </div>
                 )}
               </div>
-            ))}
-            {isTyping && (
-              <div className="flex items-start">
-                <div className="flex-shrink-0 h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-secondary flex items-center justify-center mr-2 sm:mr-3 mt-1">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714a2.25 2.25 0 01-.659 1.591L9.5 14.5M9.75 3.104c.251.023.501.05.75.082m0 0a24.301 24.301 0 014.5 0" />
-                  </svg>
+            </div>
+          ))}
+          {isTyping && (
+            <div className="py-6 px-4 md:px-6 bg-background dark:bg-dark-bg border-b border-gray-100 dark:border-gray-800 transition-colors duration-200">
+              <div className="w-full max-w-3xl mx-auto">
+                <div className="font-medium text-sm mb-2 flex items-center">
+                  <span className="text-teal-600 dark:text-teal-400">NiveshPath AI</span>
+                  <span className="ml-2 text-xs px-1.5 py-0.5 bg-teal-100 dark:bg-teal-900 text-teal-800 dark:text-white rounded-full">AI</span>
                 </div>
-                <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-3 sm:p-4 shadow-sm max-w-[85%] sm:max-w-[75%]">
-                  <div className="flex space-x-2">
-                    <div className="w-2 h-2 bg-secondary dark:bg-accent rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-secondary dark:bg-accent rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                    <div className="w-2 h-2 bg-secondary dark:bg-accent rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
-                  </div>
+                <div className="flex space-x-2 p-2 bg-gray-50 dark:bg-gray-800 rounded-md inline-flex">
+                  <div className="w-2 h-2 bg-teal-600 rounded-full animate-bounce"></div>
+                  <div className="w-2 h-2 bg-teal-600 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                  <div className="w-2 h-2 bg-teal-600 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
                 </div>
               </div>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
+            </div>
+          )}
+          <div ref={messagesEndRef} />
         </div>
         
-        {/* Input Form - fixed at bottom for mobile */}
-        <div className="bg-white dark:bg-primary border-t border-gray-200 dark:border-gray-700 p-2 sm:p-4 sticky bottom-0 left-0 right-0 z-10 shadow-md">
-          <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
+        {/* Input Form - Notion style */}
+        <div className="bg-background dark:bg-dark-bg border-t border-gray-200 dark:border-gray-700 sticky bottom-0 left-0 right-0 z-10 shadow-md">
+          <form onSubmit={handleSubmit} className="max-w-3xl mx-auto px-4 py-3 md:py-4">
             {error && <div className="text-red-500 text-sm mb-2">{error}</div>}
-            <div className="relative">
-              <input
-                type="text"
+            <div className="relative rounded-xl border border-gray-300 dark:border-gray-600 bg-light-input dark:bg-dark-input shadow-sm overflow-hidden hover:border-blue-400 dark:hover:border-blue-500 transition-colors">
+              <textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="अपना प्रश्न यहां टाइप करें..."
-                className="w-full p-3 sm:p-4 pr-12 sm:pr-16 rounded-lg border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-secondary focus:border-secondary bg-white dark:bg-gray-700 text-primary dark:text-white text-sm sm:text-base shadow-sm"
-                disabled={isTyping || loading}
+                placeholder={isAuthenticated ? "Type your question here..." : "Please login to chat..."}
+                className="w-full p-3 md:p-4 pr-12 max-h-32 focus:outline-none bg-transparent text-gray-800 dark:text-white text-sm md:text-base resize-none"
+                disabled={isTyping || loading || !isAuthenticated}
+                rows="1"
+                style={{ minHeight: '54px' }}
               />
               <button
                 type="submit"
                 disabled={isTyping || loading || input.trim() === ''}
-                className="absolute right-2 top-1.5 sm:top-2 p-1.5 sm:p-2 rounded-md text-white bg-secondary hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+                className="absolute right-2 bottom-2 p-2 rounded-full text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                aria-label="Send message"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
                 </svg>
               </button>
             </div>
-            <div className="text-xs text-center mt-1 sm:mt-2 text-gray-500 dark:text-gray-400">
-              NiveshPath AI सहायक आपके वित्तीय प्रश्नों का उत्तर देने के लिए तैयार है।
+            <div className="text-xs text-center mt-2 text-gray-800 dark:text-white">
+              NiveshPath AI assistant is ready to answer your financial questions.
             </div>
           </form>
         </div>
+        
+        {/* Add Notion-like styling */}
+        <style jsx>{`
+          /* Notion-like content styling */
+          .notion-like-content h1, .notion-like-content h2, .notion-like-content h3,
+          .notion-like-content h4, .notion-like-content h5, .notion-like-content h6 {
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+            font-weight: 600;
+            color: inherit;
+          }
+          
+          .notion-like-content p {
+            margin-bottom: 0.8em;
+            line-height: 1.6;
+            color: inherit;
+          }
+          
+          .notion-like-content ul, .notion-like-content ol {
+            margin-bottom: 1em;
+            padding-left: 1.5em;
+            color: inherit;
+          }
+          
+          .notion-like-content li {
+            margin-bottom: 0.25em;
+            color: inherit;
+          }
+          
+          .notion-like-content li::marker {
+            color: inherit;
+          }
+          
+          .notion-like-content blockquote {
+            border-left: 3px solid #e1e1e1;
+            padding-left: 1em;
+            color: inherit;
+            font-style: italic;
+            margin: 1em 0;
+          }
+          
+          .dark .notion-like-content blockquote {
+            border-left-color: #4a4a4a;
+            color: inherit;
+          }
+          
+          /* Improved code blocks */
+          .notion-like-content pre {
+            background-color: #f7f7f7;
+            border-radius: 4px;
+            padding: 1em;
+            overflow-x: auto;
+            margin: 1em 0;
+          }
+          
+          .dark .notion-like-content pre {
+            background-color: #2d2d2d;
+          }
+          
+          /* Improved tables */
+          .notion-like-content table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 1em 0;
+            overflow: hidden;
+            border-radius: 4px;
+          }
+          
+          .notion-like-content th {
+            background-color: #f5f5f5;
+            font-weight: 600;
+            text-align: left;
+          }
+          
+          .dark .notion-like-content th {
+            background-color: #333;
+          }
+          
+          .notion-like-content td, .notion-like-content th {
+            padding: 0.5em 0.75em;
+            border: 1px solid #e1e1e1;
+          }
+          
+          .dark .notion-like-content td, .dark .notion-like-content th {
+            border-color: #4a4a4a;
+          }
+          
+          .notion-like-content tr:nth-child(even) {
+            background-color: #f9f9f9;
+          }
+          
+          .dark .notion-like-content tr:nth-child(even) {
+            background-color: #2a2a2a;
+          }
+        `}</style>
       </div>
     </div>
-  );
+    );
 };
+
 
 export default Chatbot;

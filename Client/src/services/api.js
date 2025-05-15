@@ -39,7 +39,7 @@ const apiService = {
   // Onboarding endpoints
   onboarding: {
     submitOnboarding: (onboardingData) => api.post('/onboarding', onboardingData),
-    getOnboardingStatus: () => api.get('/onboarding/status'),
+    // getOnboardingStatus endpoint removed as it's not available on backend
   },
   
   // Tools endpoints
@@ -60,6 +60,9 @@ const apiService = {
   chatbot: {
     sendMessage: (message) => api.post('/chatbot/query', { query: message }),
     getHistory: () => api.get('/chatbot/history'),
+    getUserHistory: (userId) => api.get(`/chatbot/history/${userId}`),
+    deleteChat: (chatId) => api.delete(`/chatbot/chat/${chatId}`),
+    clearAllHistory: () => api.delete('/chatbot/history'),
   },
 };
 

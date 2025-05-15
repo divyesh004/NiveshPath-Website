@@ -1,12 +1,41 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import apiService from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
+import '../styles/onboarding.css';
 
 const Onboarding = () => {
   const navigate = useNavigate();
-  const [currentStep, setCurrentStep] = useState(1);
+  const { onboardingCompleted, updateOnboardingStatus } = useAuth();
+  const [currentStep, setCurrentStep] = useState(0); // Start at welcome screen (0)
   const [loading, setLoading] = useState(false);
+  const [showAnimation, setShowAnimation] = useState(true);
+  const [character, setCharacter] = useState('owl');
+  const [characterMessage, setCharacterMessage] = useState('Welcome! Let\'s set up your financial profile.');
+  const [typingEffect, setTypingEffect] = useState(true);
+  const [confetti, setConfetti] = useState(false);
+  
+  // Check if user has already completed onboarding
+  useEffect(() => {
+    const checkOnboardingStatus = async () => {
+      try {
+        const response = await apiService.onboarding.getOnboardingStatus();
+        if (response.data && response.data.completed) {
+          // User has already completed onboarding, redirect to dashboard
+          toast.info('आपने पहले ही ऑनबोर्डिंग पूरा कर लिया है');
+          navigate('/dashboard');
+        }
+      } catch (error) {
+        console.error('Error checking onboarding status:', error);
+      }
+    };
+    
+    checkOnboardingStatus();
+  }, [navigate]);
+  
+  // Calculate progress percentage based on current step (excluding welcome screen)
+  const progress = currentStep > 0 ? ((currentStep - 1) / 4) * 100 : 0;
   
   const [formData, setFormData] = useState({
     // Personal Information
@@ -117,12 +146,86 @@ const Onboarding = () => {
   };
   
   const nextStep = () => {
+    // Play sound effect (optional)
+    const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3');
+    audio.volume = 0.2;
+    audio.play().catch(e => console.log('Audio play prevented:', e));
+    
+    // Reset animation for character
+    setShowAnimation(false);
+    setTimeout(() => setShowAnimation(true), 50);
+    
+    // Update character message based on next step
+    updateCharacterMessage(currentStep + 1);
+    
+    // Move to next step with animation
     setCurrentStep(prev => prev + 1);
   };
   
   const prevStep = () => {
+    // Play sound effect (optional - different sound for back)
+    const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2570/2570-preview.mp3');
+    audio.volume = 0.2;
+    audio.play().catch(e => console.log('Audio play prevented:', e));
+    
+    // Reset animation for character
+    setShowAnimation(false);
+    setTimeout(() => setShowAnimation(true), 50);
+    
+    // Update character message based on previous step
+    updateCharacterMessage(currentStep - 1);
+    
+    // Move to previous step with animation
     setCurrentStep(prev => prev - 1);
   };
+  
+  // Update character message based on current step
+  const updateCharacterMessage = (step) => {
+    setTypingEffect(false); // Reset typing effect
+    
+    let message = '';
+    switch(step) {
+      case 0:
+        message = 'Welcome! Let\'s set up your financial profile.';
+        setCharacter('owl');
+        break;
+      case 1:
+        message = 'Great! Let\'s start with some basic information about you.';
+        setCharacter('owl');
+        break;
+      case 2:
+        message = 'Now, tell me about your financial goals. What are you saving for?';
+        setCharacter('fox');
+        break;
+      case 3:
+        message = 'Do you have any investment experience? No worries if you don\'t!';
+        setCharacter('owl');
+        break;
+      case 4:
+        message = 'Last step! Let\'s understand your financial personality better.';
+        setCharacter('fox');
+        break;
+      case 5:
+        message = 'Amazing job! You\'re all set to start your financial journey!';
+        setCharacter('owl');
+        setConfetti(true);
+        break;
+      default:
+        message = 'Let\'s continue with your financial profile.';
+    }
+    
+    setCharacterMessage(message);
+    setTimeout(() => setTypingEffect(true), 100); // Re-enable typing effect
+  };
+  
+  // Effect to handle confetti animation
+  useEffect(() => {
+    if (confetti) {
+      // Auto-disable confetti after 3 seconds
+      const timer = setTimeout(() => setConfetti(false), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [confetti]);
   
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -132,6 +235,9 @@ const Onboarding = () => {
       // Validate required fields
       if (!formData.name || !formData.age || !formData.monthlyIncome) {
         toast.error('Please fill all required fields');
+        setCharacterMessage('Oops! Please fill in all the required fields before we continue.');
+        setShowAnimation(false);
+        setTimeout(() => setShowAnimation(true), 50);
         setLoading(false);
         return;
       }
@@ -185,8 +291,18 @@ const Onboarding = () => {
       // Send data to the backend using API service
       const response = await apiService.onboarding.submitOnboarding(profileData);
     
-      toast.success('Profile created successfully!');
-      navigate('/dashboard');
+      // Show success screen with confetti
+      updateCharacterMessage(5);
+      setCurrentStep(5);
+      
+      // Update onboarding status in AuthContext
+      updateOnboardingStatus(true);
+      
+      // Navigate after a short delay to show the success screen
+      setTimeout(() => {
+        toast.success('Profile created successfully!');
+        navigate('/dashboard');
+      }, 3000);
       
     } catch (error) {
       toast.error('Failed to save your preferences. Please try again.');
@@ -198,6 +314,20 @@ const Onboarding = () => {
   // Render different form steps based on currentStep
   const renderStep = () => {
     switch(currentStep) {
+      case 0: // Welcome Screen
+        return (
+          <div className="bg-background-pro min-h-[300px] flex flex-col justify-center items-center text-center p-6 rounded-xl">
+            <h1 className="text-4xl font-bold text-primary-pro">Welcome to Your Finance Journey 🚀</h1>
+            <p className="text-text-pro mt-4">We'll guide you step-by-step to better understand your finances.</p>
+            <button 
+              onClick={nextStep}
+              className="mt-6 bg-secondary-pro hover:bg-accent-pro text-white px-6 py-3 rounded-lg text-lg transition-all transform hover:scale-105"
+            >
+              Let's Go
+            </button>
+          </div>
+        );
+        
       case 1:
         return (
           <div className="space-y-6">
@@ -481,71 +611,153 @@ const Onboarding = () => {
     }
   };
   
+  // Render success screen (final step)
+  const renderSuccessScreen = () => {
+    return (
+      <div className="bg-gradient-to-r from-background-pro to-[#e7f9f7] min-h-[300px] flex flex-col justify-center items-center text-center p-6 rounded-xl">
+        <h1 className="text-3xl font-bold text-primary-pro">🎉 Profile Created Successfully!</h1>
+        <p className="text-accent-pro text-xl mt-4">You're all set to start your financial journey!</p>
+        <button 
+          onClick={() => navigate('/dashboard')}
+          className="mt-6 bg-secondary-pro hover:bg-accent-pro text-white px-6 py-3 rounded-lg text-lg transition-all transform hover:scale-105"
+        >
+          Start Planning
+        </button>
+      </div>
+    );
+  };
+  
+  // Render motivational feedback screen
+  const renderFeedbackScreen = (message, emoji) => {
+    return (
+      <div className="bg-gradient-to-r from-background-pro to-[#e7f9f7] p-6 rounded-xl text-center">
+        <p className="text-accent-pro text-xl">{emoji} {message}</p>
+        <button 
+          onClick={nextStep}
+          className="mt-6 bg-secondary-pro hover:bg-accent-pro text-white px-6 py-3 rounded-lg transition-all transform hover:scale-105"
+        >
+          Continue
+        </button>
+      </div>
+    );
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background dark:bg-dark-bg py-8 sm:py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-6 sm:space-y-8 card p-5 sm:p-6 md:p-8">
-        <div>
-          <h2 className="mt-4 sm:mt-6 text-center text-2xl sm:text-3xl font-extrabold text-primary dark:text-white">
-            Tell us about yourself
-          </h2>
-          <p className="mt-2 text-center text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-            This helps us personalize your investment experience
-          </p>
-          
-          {/* Progress indicator */}
-          <div className="mt-4 sm:mt-6">
-            <div className="flex justify-between">
-              {[1, 2, 3, 4].map(step => (
-                <div key={step} className="flex flex-col items-center">
-                  <div 
-                    className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm ${currentStep >= step ? 'bg-secondary text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'}`}
-                  >
-                    {step}
-                  </div>
-                  <div className="text-xs mt-1 text-gray-600 dark:text-gray-400">
-                    {step === 1 ? 'Personal' : step === 2 ? 'Goals' : step === 3 ? 'Experience' : 'Psychological'}
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="mt-2 h-1 bg-gray-200 dark:bg-gray-700">
-              <div 
-                className="h-1 bg-secondary" 
-                style={{ width: `${((currentStep - 1) / 3) * 100}%` }}
-              ></div>
+    <div className="min-h-screen flex items-center justify-center bg-background-pro dark:bg-dark-bg py-8 sm:py-12 px-4 sm:px-6 lg:px-8">
+      {confetti && (
+        <div className="confetti-container">
+          {[...Array(50)].map((_, i) => (
+            <div 
+              key={i} 
+              className="confetti"
+              style={{
+                left: `${Math.random() * 100}%`,
+                animationDelay: `${Math.random() * 3}s`,
+                backgroundColor: `hsl(${Math.random() * 360}, 100%, 50%)`
+              }}
+            />
+          ))}
+        </div>
+      )}
+      
+      <div className={`max-w-md w-full space-y-6 sm:space-y-8 card p-5 sm:p-6 md:p-8 onboarding-container ${showAnimation ? 'animate-slide' : ''}`}>
+        {/* Character mascot */}
+        <div className="character-container">
+          <div className={`character ${character} ${showAnimation ? 'character-bounce' : ''}`}>
+            <div className="character-speech-bubble">
+              <span className={typingEffect ? 'typing-effect' : ''}>{characterMessage}</span>
             </div>
           </div>
         </div>
         
-        <form onSubmit={currentStep === 4 ? handleSubmit : e => { e.preventDefault(); nextStep(); }}>
-          <div className="mt-6 sm:mt-8">
-            {renderStep()}
+        {currentStep > 0 && currentStep < 5 && (
+          <div>
+            <h2 className="mt-4 sm:mt-6 text-center text-2xl sm:text-3xl font-extrabold text-primary-pro dark:text-white">
+              {currentStep === 1 ? 'Tell us about yourself' : 
+               currentStep === 2 ? 'Your Financial Goals' :
+               currentStep === 3 ? 'Investment Experience' :
+               'Your Financial Personality'}
+            </h2>
+            <p className="mt-2 text-center text-xs sm:text-sm text-text-pro dark:text-gray-400">
+              {currentStep === 1 ? 'This helps us personalize your investment experience' : 
+               currentStep === 2 ? 'What are you saving for?' :
+               currentStep === 3 ? 'No worries if you\'re just starting out' :
+               'Understanding how you think about money'}
+            </p>
             
-            <div className="mt-6 sm:mt-8 flex justify-between">
+            {/* Progress dots - Duolingo style */}
+            <div className="flex gap-2 justify-center mt-4">
+              {[1, 2, 3, 4].map(step => (
+                <span 
+                  key={step}
+                  className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                    currentStep === step 
+                      ? 'bg-secondary-pro scale-125' 
+                      : currentStep > step 
+                        ? 'bg-secondary-pro' 
+                        : 'bg-background-pro border border-secondary-pro'
+                  }`}
+                />
+              ))}
+            </div>
+            
+            {/* Progress bar */}
+            <div className="mt-3 h-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+              <div 
+                className="h-2 bg-secondary-pro rounded-full transition-all duration-500 ease-out" 
+                style={{ width: `${progress}%` }}
+              ></div>
+            </div>
+          </div>
+        )}
+        
+        <form onSubmit={handleSubmit} className="mt-6 sm:mt-8 space-y-4 sm:space-y-6">
+          <div className={`form-step-container ${showAnimation ? 'form-fade' : ''}`}>
+            {currentStep === 5 ? renderSuccessScreen() : renderStep()}
+          </div>
+          
+          {currentStep > 0 && currentStep < 5 && (
+            <div className="flex justify-between mt-6 sm:mt-8">
               {currentStep > 1 && (
                 <button
                   type="button"
                   onClick={prevStep}
-                  className="px-3 py-2 sm:px-4 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
+                  className="bg-background-pro border border-secondary-pro hover:bg-gray-100 text-secondary-pro px-4 py-2 rounded-lg flex items-center gap-2 transition-all"
+                  disabled={loading}
                 >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
                   Back
                 </button>
               )}
               
-              <button
-                type="submit"
-                disabled={loading}
-                className={`btn text-sm sm:text-base px-4 py-2 sm:px-5 sm:py-2 ${currentStep === 1 ? 'ml-auto' : ''}`}
-              >
-                {loading ? (
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 sm:h-5 sm:w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              {currentStep < 4 ? (
+                <button
+                  type="button"
+                  onClick={nextStep}
+                  className="bg-secondary-pro hover:bg-accent-pro text-white px-6 py-3 rounded-lg transition-all ml-auto flex items-center gap-2 group"
+                  disabled={loading}
+                >
+                  Next
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
-                ) : currentStep < 4 ? 'Next' : 'Complete'}
-              </button>
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  className="bg-secondary-pro hover:bg-accent-pro text-white px-6 py-3 rounded-lg transition-all ml-auto flex items-center gap-2 group"
+                  disabled={loading}
+                >
+                  {loading ? 'Saving...' : 'Submit'}
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </button>
+              )}
             </div>
-          </div>
+          )}
         </form>
       </div>
     </div>

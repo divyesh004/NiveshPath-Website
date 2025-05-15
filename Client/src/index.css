@@ -94,7 +94,7 @@
   
   /* Form Elements */
   .input-field {
-    @apply w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary focus:border-secondary dark:focus:ring-accent dark:focus:border-accent bg-white dark:bg-[#2D2D2D] text-text dark:text-dark-text transition-all duration-200 shadow-sm hover:border-gray-400 dark:hover:border-gray-600 hover:shadow-md;
+    @apply w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary focus:border-secondary dark:focus:ring-accent dark:focus:border-accent bg-light-input dark:bg-dark-input text-text dark:text-dark-text transition-all duration-200 shadow-sm hover:border-gray-400 dark:hover:border-gray-600 hover:shadow-md;
   }
   
   .form-label {
@@ -133,8 +133,8 @@
 }
 
 .dark-mode .input-field {
-  @apply bg-[#2D2D2D] border-gray-700 text-dark-text;
-}
+    @apply bg-dark-input border-gray-700 text-dark-text;
+  }
 
 /* Input field states */
 .input-field:hover {

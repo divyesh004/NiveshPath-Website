@@ -16,15 +16,19 @@ export default {
         'text-pro': '#333333', /* Dark Grey/Charcoal (Easy Readability) */
         
         /* Modern & Youthful Color Scheme (Current) */
-        primary: '#4B0082', /* Deep Purple */
-        secondary: '#00D084', /* Neon Green */
+        primary: '#000000', /* Black */
+        secondary: '#FFFFFF', /* White */
         accent: '#0077FF', /* Electric Blue */
-        background: '#FAF9F6', /* Soft Cream/Beige */
+        background: '#FFFFFF', /* White */
         text: '#1A1A1A', /* Almost Black */
+        'light-input': '#FFFFFF', /* White */
+        'light-sidebar': '#F9F9F9', /* Light Gray */
         
         /* Dark Mode Colors */
-        'dark-bg': '#121212',
-        'dark-text': '#E0E0E0'
+        'dark-bg': '#212121',
+        'dark-text': '#E0E0E0',
+        'dark-input': '#303030',
+        'dark-sidebar': '#171717'
       },
       fontFamily: {
         /* Professional Fonts */
