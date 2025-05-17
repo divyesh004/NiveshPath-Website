@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { toast } from 'react-toastify';
 import apiService from '../services/api';
 import { useAuth } from '../contexts/AuthContext'; // Import Auth Context
 import Onboarding from './Onboarding'; // Import Onboarding component
@@ -15,15 +14,18 @@ const formatBotMessage = (text) => {
     const lang = language ? language.trim() : '';
     const langClass = lang ? ` language-${lang}` : '';
     
-    return `<div class="bg-gray-100 dark:bg-gray-900 rounded-md p-3 my-3 overflow-x-auto font-mono text-sm border border-gray-200 dark:border-gray-700 shadow-sm">
+    // Check if this is a greeting message (typically very short)
+    const isGreeting = text.length < 20;
+    
+    return `<div class="bg-gray-100 dark:bg-gray-900 rounded-lg p-3 my-3 overflow-x-auto font-mono text-sm border border-gray-200 dark:border-gray-700 shadow-sm">
       <div class="flex justify-between items-center mb-2">
         <span class="text-xs text-gray-800 dark:text-white font-medium">${lang ? lang.toUpperCase() : 'CODE'}</span>
-        <button class="text-xs text-gray-800 hover:text-gray-900 dark:text-white dark:hover:text-white transition-colors" title="Copy code">
+        ${!isGreeting ? `<button class="text-xs text-gray-800 hover:text-gray-900 dark:text-white dark:hover:text-white transition-colors" title="Copy code">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
             <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/>
             <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/>
           </svg>
-        </button>
+        </button>` : ''}
       </div>
       <pre class="m-0 p-0 bg-transparent border-0${langClass}"><code class="text-gray-800 dark:text-white${langClass}">${sanitizedCode}</code></pre>
     </div>`;
@@ -31,7 +33,7 @@ const formatBotMessage = (text) => {
   
   // Process inline code with improved styling
   formattedText = formattedText.replace(/`([^`]+)`/g, (match, code) => {
-    return `<code class="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded font-mono text-sm text-gray-800 dark:text-white border border-gray-200 dark:border-gray-700">${code}</code>`;
+    return `<code class="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded-md font-mono text-sm text-gray-800 dark:text-white border border-gray-200 dark:border-gray-700">${code}</code>`;
   });
   
   // Special handler for investment tables with enhanced styling
@@ -76,7 +78,7 @@ const formatBotMessage = (text) => {
     const isInvestmentData = isInvestmentTable(match);
     
     // Build table HTML with enhanced Notion-like styling
-    let tableHtml = `<div class="relative overflow-hidden my-6 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
+    let tableHtml = `<div class="relative overflow-hidden my-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
       <!-- Table Toolbar -->
       <div class="flex items-center justify-between px-4 py-2 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
         <div class="flex items-center space-x-2">
@@ -107,7 +109,7 @@ const formatBotMessage = (text) => {
     tableHtml += `<tr class="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">`;
     headerCells.forEach((cell, index) => {
       const alignment = alignments[index] || 'text-left';
-      tableHtml += `<th class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 font-semibold ${alignment} text-gray-800 dark:text-white text-sm uppercase tracking-wider sticky top-0 bg-gray-50 dark:bg-gray-900 z-10">${cell}</th>`;
+      tableHtml += `<th class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 font-semibold ${alignment} text-gray-800 dark:text-white text-sm uppercase tracking-wider sticky top-0 bg-gray-50 dark:bg-gray-900 z-10 shadow-sm">${cell}</th>`;
     });
     tableHtml += '</tr></thead>';
     
@@ -259,17 +261,17 @@ const formatBotMessage = (text) => {
     // Add footer for tables
     if (isInvestmentData) {
       tableHtml += `
-        <div class="px-4 py-3 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-800 dark:text-white">
+        <div class="px-4 py-3 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-800 dark:text-white rounded-b-lg">
           <div class="flex items-center justify-between">
             <span>Data as of ${new Date().toLocaleDateString('en-US', {month: 'long', year: 'numeric'})}</span>
             <div class="flex space-x-2">
-              <button class="text-gray-800 hover:text-gray-900 dark:text-white dark:hover:text-gray-200 transition-colors font-medium text-xs flex items-center">
+              <button class="text-gray-800 hover:text-gray-900 dark:text-white dark:hover:text-gray-200 transition-colors font-medium text-xs flex items-center rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 px-2 py-1">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                 </svg>
                 Download CSV
               </button>
-              <button class="text-gray-800 hover:text-gray-900 dark:text-white dark:hover:text-gray-200 transition-colors font-medium text-xs flex items-center">
+              <button class="text-gray-800 hover:text-gray-900 dark:text-white dark:hover:text-gray-200 transition-colors font-medium text-xs flex items-center rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 px-2 py-1">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
                 </svg>
@@ -305,7 +307,7 @@ const formatBotMessage = (text) => {
     const isInvestmentData = isInvestmentTable(match);
     
     // Build table HTML with enhanced Notion-like styling
-    let tableHtml = `<div class="relative overflow-hidden my-6 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
+    let tableHtml = `<div class="relative overflow-hidden my-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
       <!-- Table Toolbar -->
       <div class="flex items-center justify-between px-4 py-2 ${isInvestmentData ? 'bg-blue-50 dark:bg-indigo-950' : 'bg-gray-50 dark:bg-gray-900'} border-b border-gray-200 dark:border-gray-700">
         <div class="flex items-center space-x-2">
@@ -347,7 +349,7 @@ const formatBotMessage = (text) => {
     const firstRowCells = tableRows[0].split('|').slice(1, -1).map(cell => cell.trim());
     tableHtml += `<tr class="${isInvestmentData ? 'bg-blue-50 dark:bg-indigo-950' : 'bg-gray-50 dark:bg-gray-900'} border-b border-gray-200 dark:border-gray-700">`;
     firstRowCells.forEach(cell => {
-      tableHtml += `<th class="px-4 py-3 whitespace-normal font-semibold text-sm uppercase tracking-wider ${isInvestmentData ? 'text-gray-800 dark:text-white' : 'text-gray-800 dark:text-white'}">${cell}</th>`;
+      tableHtml += `<th class="px-4 py-3 whitespace-normal font-semibold text-sm uppercase tracking-wider ${isInvestmentData ? 'text-gray-800 dark:text-white' : 'text-gray-800 dark:text-white'} border-b border-gray-200 dark:border-gray-700 shadow-sm">${cell}</th>`;
     });
     tableHtml += '</tr>';
     
@@ -498,17 +500,17 @@ const formatBotMessage = (text) => {
     // Add footer for tables
     if (isInvestmentData) {
       tableHtml += `
-        <div class="px-4 py-3 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-800 dark:text-white">
+        <div class="px-4 py-3 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-800 dark:text-white rounded-b-lg">
           <div class="flex items-center justify-between">
             <span>Data as of ${new Date().toLocaleDateString('en-US', {month: 'long', year: 'numeric'})}</span>
             <div class="flex space-x-2">
-              <button class="text-gray-800 hover:text-gray-900 dark:text-white dark:hover:text-gray-200 transition-colors font-medium text-xs flex items-center">
+              <button class="text-gray-800 hover:text-gray-900 dark:text-white dark:hover:text-gray-200 transition-colors font-medium text-xs flex items-center rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 px-2 py-1">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                 </svg>
                 Download CSV
               </button>
-              <button class="text-gray-800 hover:text-gray-900 dark:text-white dark:hover:text-gray-200 transition-colors font-medium text-xs flex items-center">
+              <button class="text-gray-800 hover:text-gray-900 dark:text-white dark:hover:text-gray-200 transition-colors font-medium text-xs flex items-center rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 px-2 py-1">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
                 </svg>
@@ -629,7 +631,7 @@ const formatBotMessage = (text) => {
         const isInvestmentData = isInvestmentTable(tableMatch);
         
         // Build table HTML with enhanced Notion-like styling
-        let tableHtml = `<div class="relative overflow-hidden my-6 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
+    let tableHtml = `<div class="relative overflow-hidden my-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
           <!-- Table Toolbar -->
           <div class="flex items-center justify-between px-4 py-2 ${isInvestmentData ? 'bg-blue-50 dark:bg-indigo-950' : 'bg-gray-50 dark:bg-gray-900'} border-b border-gray-200 dark:border-gray-700">
             <div class="flex items-center space-x-2">
@@ -901,21 +903,63 @@ const formatBotMessage = (text) => {
 
 // Chatbot component
 
-// Chatbot component
+
+
+// Welcome component that shows at the start of a new chat
+// const WelcomeMessage = ({ onDismiss }) => {
+//   return (
+//     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-6 border border-gray-200 dark:border-gray-700 max-w-2xl mx-auto">
+//       <div className="flex items-center justify-between mb-4">
+//         <h3 className="text-lg font-medium text-gray-800 dark:text-white">Welcome to NiveshPath AI</h3>
+//         <button 
+//           onClick={onDismiss}
+//           className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+//         >
+//           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+//             <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+//           </svg>
+//         </button>
+//       </div>
+//       <p className="text-gray-800 dark:text-white mb-4">Your financial assistant is ready to serve you. I can help you with the following topics:</p>
+//       <ul className="space-y-2 mb-4">
+//         <li className="flex items-start">
+//           <svg className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+//             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+//           </svg>
+//           <span className="text-gray-800 dark:text-white">Investment advice and strategies</span>
+//         </li>
+//         <li className="flex items-start">
+//           <svg className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+//             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+//           </svg>
+//           <span className="text-gray-800 dark:text-white">Budget and financial planning</span>
+//         </li>
+//         <li className="flex items-start">
+//           <svg className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+//             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+//           </svg>
+//           <span className="text-gray-800 dark:text-white">Information about financial products</span>
+//         </li>
+//       </ul>
+//       <div className="text-right">
+//         <button 
+//           onClick={onDismiss}
+//           className="px-4 py-2 bg-primary text-white rounded-md hover:bg-opacity-90 transition-colors"
+//         >
+//           Get Started
+//         </button>
+//       </div>
+//     </div>
+//   );
+// };
+
 const Chatbot = ({ darkMode, setDarkMode }) => {
   const { currentUser, isAuthenticated, onboardingCompleted } = useAuth(); // Get user info and onboarding status
   const navigate = useNavigate();
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const [messages, setMessages] = useState([
-    { id: 1, text: 'Hello! I am NiveshPath\'s AI Financial Advisor. You can ask me questions about investments, savings, budgeting, or any financial topic.', isBot: true },
-  ]);
+  const [showWelcome, setShowWelcome] = useState(true);
+  const [messages, setMessages] = useState([]);
   
-  // Welcome message that will be shown if chat history is cleared
-  const welcomeMessage = { 
-    id: 1, 
-    text: 'Hello! I am NiveshPath\'s AI Financial Advisor. You can ask me questions about investments, savings, budgeting, or any financial topic.', 
-    isBot: true 
-  };
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -923,47 +967,83 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
   const [showSidebar, setShowSidebar] = useState(true);
   const [newChat, setNewChat] = useState(false);
   const [chatHistory, setChatHistory] = useState([]);
+  const [showHistory, setShowHistory] = useState(false); // State to toggle chat history panel
   const messagesEndRef = useRef(null);
 
   // Fetch chat history when component mounts or user changes
   useEffect(() => {
     // Redirect to login if not authenticated
     if (!isAuthenticated) {
-      toast.info('कृपया चैटबॉट का उपयोग करने के लिए लॉगिन करें');
       navigate('/login');
       return;
     }
     
-    // Check if user has completed onboarding
-    if (!onboardingCompleted) {
-      setShowOnboarding(true);
-    } else {
-      setShowOnboarding(false);
-    }
-    
-    // Get user-specific keys for localStorage
-    const userKey = currentUser?.id || 'guest';
-    const messagesKey = `chatMessages_${userKey}`;
-    const historyKey = `chatHistory_${userKey}`;
-    
-    // First try to load from localStorage with user-specific keys
-    const savedMessages = localStorage.getItem(messagesKey);
-    const savedHistory = localStorage.getItem(historyKey);
-    
-    if (savedMessages && savedHistory) {
+    // Load chat history from localStorage first
+    const loadChatFromLocalStorage = () => {
       try {
-        setMessages(JSON.parse(savedMessages));
-        setChatHistory(JSON.parse(savedHistory));
+        const userKey = currentUser?.id || 'guest';
+        const messagesKey = `chatMessages_${userKey}`;
+        const historyKey = `chatHistory_${userKey}`;
+        
+        const savedMessages = localStorage.getItem(messagesKey);
+        const savedHistory = localStorage.getItem(historyKey);
+        
+        if (savedMessages) {
+          setMessages(JSON.parse(savedMessages));
+          setShowWelcome(false);
+        }
+        
+        if (savedHistory) {
+          setChatHistory(JSON.parse(savedHistory));
+        }
       } catch (error) {
-        console.error('Error parsing saved chat data:', error);
-        // If local storage parsing fails, fetch from API
-        fetchChatHistory();
+        // If there's an error loading from localStorage, continue with empty state
       }
-    } else {
-      // If no local data, fetch from API
-      fetchChatHistory();
-    }
+    };
+    
+    // Load from localStorage first
+    loadChatFromLocalStorage();
+    
+    // Check onboarding status from the backend API
+    const checkOnboardingStatus = async () => {
+      try {
+        const response = await apiService.user.checkOnboardingStatus();
+        if (response && response.data) {
+          const { isOnboardingCompleted } = response.data;
+          
+          // If onboarding is not completed, show the onboarding form
+          if (!isOnboardingCompleted) {
+            setShowOnboarding(true);
+          } else {
+            setShowOnboarding(false);
+            // Fetch chat history only if onboarding is completed
+            fetchChatHistory();
+          }
+        }
+      } catch (error) {
+        // Fallback to context value if API call fails
+        if (!onboardingCompleted) {
+          setShowOnboarding(true);
+        } else {
+          setShowOnboarding(false);
+          // Fetch chat history only if onboarding is completed
+          fetchChatHistory();
+        }
+      }
+    };
+    
+    checkOnboardingStatus();
+    
+    // Show welcome message for new sessions
+    setShowWelcome(true);
+    
   }, [currentUser, isAuthenticated, navigate, onboardingCompleted]);
+  
+  // Handle onboarding completion
+  const handleOnboardingComplete = () => {
+    setShowOnboarding(false);
+    fetchChatHistory();
+  };
 
   // Function to fetch chat history from the backend for the current user
   const fetchChatHistory = async () => {
@@ -971,22 +1051,34 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
     
     try {
       setLoading(true);
-      console.log('Fetching chat history for user:', currentUser?.id);
       
       // Get user-specific chat history using the user ID
       let response;
       try {
         // First try to get user-specific history if we have a user ID
         if (currentUser?.id) {
+          // Use the backend API to get user-specific chat history
           response = await apiService.chatbot.getUserHistory(currentUser.id);
-          console.log('User-specific history response:', response);
         } else {
           // Fallback to general history if no user ID
           response = await apiService.chatbot.getHistory();
-          console.log('General history response:', response);
+        }
+        
+        // Check if we have local storage history first
+        const userKey = currentUser?.id || 'guest';
+        const localMessagesKey = `chatMessages_${userKey}`;
+        const localHistoryKey = `chatHistory_${userKey}`;
+        const localMessages = localStorage.getItem(localMessagesKey);
+        const localHistory = localStorage.getItem(localHistoryKey);
+        
+        // If we have local storage data, use it instead
+        if (localMessages && localHistory) {
+          setMessages(JSON.parse(localMessages));
+          setChatHistory(JSON.parse(localHistory));
+          setLoading(false);
+          return;
         }
       } catch (apiError) {
-        console.error('API error when fetching chat history:', apiError);
         // Create a fallback response with empty data array
         response = { data: [] };
       }
@@ -998,7 +1090,6 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
       
       // Ensure response.data is an array
       const chatData = Array.isArray(response.data) ? response.data : [];
-      console.log('Chat data length:', chatData.length);
       
       // If we have history, process it
       if (chatData.length > 0) {
@@ -1011,7 +1102,6 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
           timestamp: msg.timestamp || new Date().toISOString()
         }));
         
-        console.log('Formatted messages:', formattedMessages.length);
         setMessages(formattedMessages);
         
         // Save to localStorage with user-specific key
@@ -1025,8 +1115,6 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
           (msg.sender === 'user' || !msg.isBot) && 
           (!msg.userId || msg.userId === currentUser?.id)
         );
-        
-        console.log('User messages found:', userMessages.length);
         
         if (userMessages.length > 0) {
           // Use first user message as title for the first chat
@@ -1084,25 +1172,30 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
           });
         }
         
-        console.log('Unique chats created:', uniqueChats.length);
         setChatHistory(uniqueChats);
         
         // Save chat history to localStorage with user-specific key
         localStorage.setItem(historyKey, JSON.stringify(uniqueChats));
+        
+        // Make sure to update the UI with the fetched history
+        if (formattedMessages.length > 0) {
+          setMessages(formattedMessages);
+        }
       } else {
         // If no chat history found, set default welcome message
-        console.log('No chat history found, using welcome message');
-        setMessages([welcomeMessage]);
-        localStorage.setItem(messagesKey, JSON.stringify([welcomeMessage]));
-        
-        // Create a default chat history entry
-        const defaultChat = {
-          id: 1,
-          title: 'New Financial Chat',
-          date: new Date().toLocaleDateString(),
-          messages: [welcomeMessage],
-          userId: currentUser?.id || 'guest'
-        };
+      // No chat history found, using welcome message
+      // setMessages([welcomeMessage]);
+      setShowWelcome(true); // Show welcome message for new chat
+      // localStorage.setItem(messagesKey, JSON.stringify([welcomeMessage]));
+      
+      // Create a default chat history entry
+      // const defaultChat = {
+      //   id: 1,
+      //   title: 'New Financial Chat',
+      //   date: new Date().toLocaleDateString(),
+      //   messages: [welcomeMessage],
+      //   userId: currentUser?.id || 'guest'
+      // };
         
         setChatHistory([defaultChat]);
         localStorage.setItem(historyKey, JSON.stringify([defaultChat]));
@@ -1114,16 +1207,16 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
       const messagesKey = `chatMessages_${userKey}`;
       const historyKey = `chatHistory_${userKey}`;
       
-      setMessages([welcomeMessage]);
-      localStorage.setItem(messagesKey, JSON.stringify([welcomeMessage]));
+      // setMessages([welcomeMessage]);
+      // localStorage.setItem(messagesKey, JSON.stringify([welcomeMessage]));
       
-      const defaultChat = {
-        id: 1,
-        title: 'New Financial Chat',
-        date: new Date().toLocaleDateString(),
-        messages: [welcomeMessage],
-        userId: currentUser?.id || 'guest'
-      };
+      // const defaultChat = {
+      //   id: 1,
+      //   title: 'New Financial Chat',
+      //   date: new Date().toLocaleDateString(),
+      //   messages: [welcomeMessage],
+      //   userId: currentUser?.id || 'guest'
+      // };
       
       setChatHistory([defaultChat]);
       localStorage.setItem(historyKey, JSON.stringify([defaultChat]));
@@ -1135,7 +1228,7 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
   // Function to load a specific chat from history
   const loadChatFromHistory = (chat) => {
     if (!isAuthenticated) {
-      toast.info('कृपया चैट इतिहास देखने के लिए लॉगिन करें');
+      toast.info('Please login to view chat history');
       navigate('/login');
       return;
     }
@@ -1174,7 +1267,12 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
           
           setInput('');
           setError(null);
-          toast.info(`चैट लोड की गई: ${chat.title}`);
+          toast.success(`चैट लोड की गई: ${chat.title}`);
+          
+          // Close sidebar on mobile after loading chat
+          if (isMobile) {
+            setShowSidebar(false);
+          }
         } else {
           // If no messages found, show error
           throw new Error('No messages found in selected chat');
@@ -1184,21 +1282,23 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
         toast.error('Problem loading chat history');
         
         // Set default welcome message as fallback
-        setMessages([welcomeMessage]);
-        
-        // Get user-specific key for localStorage
-        const userKey = currentUser?.id || 'guest';
-        const messagesKey = `chatMessages_${userKey}`;
-        
-        // Save default message to localStorage
-        localStorage.setItem(messagesKey, JSON.stringify([welcomeMessage]));
+      // setMessages([welcomeMessage]);
+      // setShowWelcome(true); // Show welcome message for new chat
+      
+      // Get user-specific key for localStorage
+      const userKey = currentUser?.id || 'guest';
+      const messagesKey = `chatMessages_${userKey}`;
+      
+      // Save default message to localStorage
+      // localStorage.setItem(messagesKey, JSON.stringify([welcomeMessage]));
       }
     } else {
       console.error('Invalid chat object:', chat);
       toast.error('Could not load chat history');
       
       // Set default welcome message as fallback
-      setMessages([welcomeMessage]);
+      // setMessages([welcomeMessage]);
+      // setShowWelcome(true); // Show welcome message for new chat
     }
   };
   
@@ -1207,29 +1307,30 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
     event.stopPropagation(); // Prevent triggering the parent button click
     
     if (!isAuthenticated) {
-      toast.info('चैट इतिहास प्रबंधित करने के लिए कृपया लॉगिन करें');
+      toast.info('Please login to manage chat history');
       navigate('/login');
       return;
     }
     
     try {
       setLoading(true);
-      console.log('Deleting chat with ID:', chatId);
+      // Deleting chat with ID
       
       // If user is authenticated, delete from server too
       if (currentUser?.id) {
         try {
           await apiService.chatbot.deleteChat(chatId);
-          console.log('Chat deleted from server successfully');
+          toast.success('Chat successfully deleted');
         } catch (apiError) {
           console.error('Error deleting chat from server:', apiError);
+          toast.error('Problem deleting chat from server');
           // Continue with local deletion even if server deletion fails
         }
       }
       
       // Remove chat from local state
       const updatedHistory = chatHistory.filter(chat => chat.id !== chatId);
-      console.log('Updated chat history length:', updatedHistory.length);
+      // Updated chat history
       setChatHistory(updatedHistory);
       
       // Get user-specific key for localStorage
@@ -1239,6 +1340,11 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
       // Update localStorage with user-specific key
       localStorage.setItem(historyKey, JSON.stringify(updatedHistory));
       
+      // Show success message if not already shown
+      if (!currentUser?.id) {
+        toast.success('Chat successfully deleted');
+      }
+      
       // If this was the current active chat, reset to welcome message
       const deletedChat = chatHistory.find(chat => chat.id === chatId);
       if (deletedChat && messages.length > 0) {
@@ -1247,12 +1353,12 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
         const deletedFirstMsg = deletedChat.messages[0]?.content || deletedChat.messages[0]?.text;
         
         if (currentFirstMsg === deletedFirstMsg) {
-          console.log('Resetting current chat to welcome message');
-          setMessages([welcomeMessage]);
+          // Resetting current chat to welcome message
+          // setMessages([welcomeMessage]);
           
           // Update localStorage for messages too
           const messagesKey = `chatMessages_${userKey}`;
-          localStorage.setItem(messagesKey, JSON.stringify([welcomeMessage]));
+          // localStorage.setItem(messagesKey, JSON.stringify([welcomeMessage]));
         }
       }
       
@@ -1268,20 +1374,20 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
   // Function to clear chat history
   const clearChat = async () => {
     if (!isAuthenticated) {
-      toast.info('चैट इतिहास प्रबंधित करने के लिए कृपया लॉगिन करें');
+      toast.info('Please login to manage chat history');
       navigate('/login');
       return;
     }
     
     try {
       setLoading(true);
-      console.log('Clearing all chat history');
+      // Clearing all chat history
       
       // If user is authenticated, clear history from server too
       if (currentUser?.id) {
         try {
           await apiService.chatbot.clearAllHistory();
-          console.log('Chat history cleared from server successfully');
+          // Chat history cleared from server successfully
         } catch (apiError) {
           console.error('Error clearing chat history from server:', apiError);
           // Continue with local clearing even if server clearing fails
@@ -1289,7 +1395,7 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
       }
       
       // Reset to just the welcome message
-      setMessages([welcomeMessage]);
+      // setMessages([welcomeMessage]);
       setChatHistory([]);
       
       // Get user-specific key for localStorage
@@ -1298,17 +1404,17 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
       const historyKey = `chatHistory_${userKey}`;
       
       // Update localStorage with user-specific key
-      localStorage.setItem(messagesKey, JSON.stringify([welcomeMessage]));
+      // localStorage.setItem(messagesKey, JSON.stringify([welcomeMessage]));
       localStorage.setItem(historyKey, JSON.stringify([]));
       
       // Create a default chat entry after clearing
-      const defaultChat = {
-        id: 1,
-        title: 'नई वित्तीय चैट',
-        date: new Date().toLocaleDateString(),
-        messages: [welcomeMessage],
-        userId: currentUser?.id || 'guest'
-      };
+      // const defaultChat = {
+      //   id: 1,
+      //   title: 'New Financial Chat',
+      //   date: new Date().toLocaleDateString(),
+      //   messages: [welcomeMessage],
+      //   userId: currentUser?.id || 'guest'
+      // };
       
       // Update state and localStorage with the default chat
       setChatHistory([defaultChat]);
@@ -1324,7 +1430,8 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
 
       
       // Set default welcome message as fallback
-      setMessages([welcomeMessage]);
+      // setMessages([welcomeMessage]);
+      // setShowWelcome(true); // Show welcome message for new chat
     } finally {
       setLoading(false);
     }
@@ -1333,15 +1440,16 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
   // Function to start a new chat
   const startNewChat = () => {
     if (!isAuthenticated) {
-      toast.info('नई चैट शुरू करने के लिए कृपया लॉगिन करें');
+      toast.info('Please login to start a new chat');
       navigate('/login');
       return;
     }
     
-    console.log('Starting a new chat');
+    // Starting a new chat
     
     // Reset to welcome message
-    setMessages([welcomeMessage]);
+    // setMessages([welcomeMessage]);
+    // setShowWelcome(true); // Show welcome message for new chat
     
     // Get user-specific keys for localStorage
     const userKey = currentUser?.id || 'guest';
@@ -1349,7 +1457,7 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
     const historyKey = `chatHistory_${userKey}`;
     
     // Update localStorage with user-specific key
-    localStorage.setItem(messagesKey, JSON.stringify([welcomeMessage]));
+    // localStorage.setItem(messagesKey, JSON.stringify([welcomeMessage]));
     
     // Reset input and error state
     setInput('');
@@ -1361,33 +1469,42 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
       Math.max(...chatHistory.map(chat => chat.id)) + 1 : 1;
     
     // Add new chat to history with user ID
-    const newChatEntry = {
-      id: newChatId,
-      title: 'नई वित्तीय चैट',
-      date: new Date().toLocaleDateString(),
-      messages: [welcomeMessage],
-      userId: currentUser?.id || 'guest' // Add user ID to new chat
-    };
+    // const newChatEntry = {
+    //   id: newChatId,
+    //   title: 'नई वित्तीय चैट',
+    //   date: new Date().toLocaleDateString(),
+    //   messages: [welcomeMessage],
+    //   userId: currentUser?.id || 'guest' // Add user ID to new chat
+    // };
+    
+    // Show success message
+    toast.success('New chat successfully started');
     
     // Add new chat to the beginning of the history array
     const updatedHistory = [newChatEntry, ...chatHistory];
-    console.log('Updated chat history with new chat, total chats:', updatedHistory.length);
+    // Updated chat history with new chat
     
     setChatHistory(updatedHistory);
     
     // Update localStorage with user-specific key
     localStorage.setItem(historyKey, JSON.stringify(updatedHistory));
-    
-    toast.info('नई चैट शुरू की गई');
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (input.trim() === '') return;
     
-    // Check if user has completed onboarding
-    if (!onboardingCompleted) {
+    // Hide welcome message when user starts typing
+    if (showWelcome) {
+      setShowWelcome(false);
+    }
+    
+    // Check if user has completed onboarding - only check once per session
+    const hasCheckedOnboarding = sessionStorage.getItem('onboardingChecked');
+    
+    if (!hasCheckedOnboarding && !onboardingCompleted) {
       setShowOnboarding(true);
+      sessionStorage.setItem('onboardingChecked', 'true');
       return;
     }
     
@@ -1422,6 +1539,11 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
         };
         const updatedMessages = [...messages, botMessage];
         setMessages(updatedMessages);
+        
+        // Scroll to the user's question after response is received
+        setTimeout(() => {
+          scrollToLatestQuestion();
+        }, 300);
         
         // Get user-specific key for localStorage
         const userKey = currentUser?.id || 'guest';
@@ -1488,9 +1610,28 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
     }
   };
 
-  // Auto-scroll to bottom when new messages are added
+  // Function to scroll to the latest user question
+  const scrollToLatestQuestion = () => {
+    // Find the last user message
+    const userMessages = messages.filter(msg => !msg.isBot);
+    if (userMessages.length > 0) {
+      const lastUserMessage = userMessages[userMessages.length - 1];
+      const element = document.getElementById(`message-${lastUserMessage.id}`);
+      if (element) {
+        // Scroll to the user's question but keep it in view
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+  };
+  
+  // Auto-scroll to bottom when new messages are added, but only if user hasn't scrolled up
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    // Only auto-scroll if we're adding a new bot message or when typing indicator appears/disappears
+    const lastMessage = messages[messages.length - 1];
+    if (lastMessage?.isBot || isTyping) {
+      // Scroll to the user's question instead of the bottom to keep context visible
+      scrollToLatestQuestion();
+    }
   }, [messages, isTyping]);
   
   // Handle pressing Enter key to submit
@@ -1533,45 +1674,61 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
 
   // If onboarding needs to be shown, render the Onboarding component
   if (showOnboarding) {
-    return <Onboarding fromChatbot={true} />;
+    return <Onboarding fromChatbot={true} onComplete={handleOnboardingComplete} />;
   }
   
   return (
-    <div className="flex h-screen bg-gray-100 dark:bg-gray-900 overflow-hidden">
-      {/* Sidebar - Notion style */}
-      <div className={`${showSidebar ? (isMobile ? 'w-64' : 'w-72') : 'w-0'} ${showSidebar && isMobile ? 'absolute z-30 h-screen' : ''} bg-light-sidebar dark:bg-dark-sidebar text-gray-800 dark:text-white transition-all duration-300 overflow-hidden flex flex-col shadow-lg border-r border-gray-200 dark:border-gray-700`}>
-        {/* New Chat Button - Notion style */}
-        <div className="p-3 sm:p-4">
+    <div className="flex h-screen bg-white dark:bg-gray-900 overflow-hidden">
+      <div className={`${showSidebar ? (isMobile ? 'w-64' : 'w-72') : 'w-0'} ${showSidebar && isMobile ? 'absolute z-30 h-screen' : ''} bg-white dark:bg-gray-800 text-gray-800 dark:text-white transition-all duration-300 overflow-hidden flex flex-col shadow-lg border-r border-gray-200 dark:border-gray-700`}>
+        {/* New Chat Button - Enhanced modern style */}
+        <div className="p-3 sm:p-4 bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
           <button 
             onClick={startNewChat}
-            className="w-full flex items-center justify-center gap-2 p-3 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 text-gray-800 dark:text-white transition-colors text-sm font-medium shadow-sm"
+            className="w-full flex items-center justify-center gap-2 p-3 rounded-lg bg-primary hover:bg-primary-dark dark:bg-secondary dark:hover:bg-secondary-dark text-white transition-colors text-sm font-medium shadow-md hover:shadow-lg group focus:outline-none focus:ring-2 focus:ring-primary/50 dark:focus:ring-secondary/50"
+            disabled={loading || isTyping}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
             <span>New Chat</span>
           </button>
         </div>
         
-        {/* Chat History - Notion style */}
-        <div className="flex-1 overflow-y-auto px-3 py-2">
-          <h3 className="text-xs uppercase text-gray-800 dark:text-white font-semibold mb-2 px-1">Chat History</h3>
+        {/* Chat History - Enhanced modern style */}
+        <div className={`flex-1 overflow-y-auto px-3 py-2 ${showHistory ? 'block' : 'hidden'}`}>
+          <div className="flex items-center justify-between mb-3 bg-gray-50 dark:bg-gray-700 p-2 rounded-lg">
+            <h3 className="text-xs uppercase text-gray-700 dark:text-gray-300 font-semibold px-1 tracking-wider flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1 text-primary dark:text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Chat History
+            </h3>
+            <button 
+              onClick={() => setShowHistory(!showHistory)}
+              className="p-1.5 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50 dark:focus:ring-secondary/50"
+              title={showHistory ? 'Hide History' : 'Show History'}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 transition-transform duration-200 text-primary dark:text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ transform: showHistory ? 'rotate(0deg)' : 'rotate(-90deg)' }}>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+          </div>
           {!isAuthenticated ? (
-            <div className="text-center p-3 text-sm text-gray-800 dark:text-white bg-gray-100 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+            <div className="text-center p-3 text-sm text-gray-800 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm">
               <p>Please login to view your chat history</p>
-              <Link to="/login" className="text-gray-800 dark:text-white hover:underline mt-2 block">Login</Link>
+              <Link to="/login" className="text-blue-600 dark:text-blue-400 hover:underline mt-2 block">Login</Link>
             </div>
           ) : loading ? (
-            <div className="text-center p-3 text-sm text-gray-800 dark:text-white bg-gray-100 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+            <div className="text-center p-3 text-sm text-gray-800 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm">
               <p>Loading chat history...</p>
               <div className="loader mt-2 mx-auto"></div>
             </div>
           ) : chatHistory.length === 0 ? (
-            <div className="text-center p-3 text-sm text-gray-800 dark:text-white bg-gray-100 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+            <div className="text-center p-3 text-sm text-gray-800 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm">
               <p>No chat history found</p>
               <button 
                 onClick={startNewChat}
-                className="text-gray-800 dark:text-white hover:underline mt-2 block mx-auto"
+                className="text-blue-600 dark:text-blue-400 hover:underline mt-2 block mx-auto"
               >
                 Start a new chat
               </button>
@@ -1584,20 +1741,22 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
                 .map(chat => (
                 <div key={chat.id} className="relative group">
                   <button 
-                    className="w-full text-left p-3 rounded-lg text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-start gap-3 overflow-hidden text-sm border border-transparent hover:border-gray-200 dark:hover:border-gray-600"
+                    className="w-full text-left p-3 rounded-lg text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-start gap-3 overflow-hidden text-sm border border-gray-200 dark:border-gray-700 hover:border-primary/30 dark:hover:border-secondary/30 shadow-sm hover:shadow-md group focus:outline-none focus:ring-2 focus:ring-primary/50 dark:focus:ring-secondary/50"
                     onClick={() => loadChatFromHistory(chat)}
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 flex-shrink-0 text-gray-800 dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                    </svg>
+                    <div className="h-8 w-8 rounded-full bg-primary/10 dark:bg-secondary/20 flex items-center justify-center flex-shrink-0 text-primary dark:text-secondary shadow-sm">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                      </svg>
+                    </div>
                     <div className="overflow-hidden flex-grow">
-                      <div className="truncate">{chat.title}</div>
-                      <div className="text-xs text-gray-800 dark:text-white mt-1">{chat.date}</div>
+                      <div className="truncate font-medium group-hover:text-primary dark:group-hover:text-secondary transition-colors">{chat.title}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{chat.date}</div>
                     </div>
                     <button 
                       onClick={(e) => deleteChat(chat.id, e)}
-                      className="opacity-0 group-hover:opacity-100 p-1 rounded-full hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500 dark:text-red-400 transition-opacity"
-                      title="चैट हटाएं"
+                      className="opacity-0 group-hover:opacity-100 p-1.5 rounded-full hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500 dark:text-red-400 transition-opacity focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:ring-opacity-50"
+                      title="Delete Chat"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1606,48 +1765,68 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
                   </button>
                 </div>
               ))}
+          {/* Removed divider lines after questions */}
             </div>
           )}
         </div>
         
-        {/* User & Settings - Notion style */}
-        <div className="p-3 border-t border-gray-200 dark:border-gray-700">
-          <Link to="/dashboard" className="block p-2 rounded-lg text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors mb-1">
+        {/* App title - Enhanced */}
+        <div className="p-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
+          <div className="flex items-center justify-center">
+            <div className="h-7 w-7 rounded-full bg-primary/10 dark:bg-secondary/20 flex items-center justify-center mr-2 text-primary dark:text-secondary shadow-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+              </svg>
+            </div>
+            <h2 className="text-sm font-bold text-primary dark:text-secondary">NiveshPath AI</h2>
+          </div>
+        </div>
+        
+        {/* User & Settings - Enhanced */}
+        <div className="mt-auto p-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
+          <Link to="/dashboard" className="block p-2.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors mb-2 hover:text-primary dark:hover:text-secondary focus:outline-none focus:ring-2 focus:ring-primary/50 dark:focus:ring-secondary/50">
             <div className="flex items-center gap-3 text-sm">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-800 dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-600 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
               </svg>
-              <span>Dashboard</span>
+              <span className="font-medium">Dashboard</span>
             </div>
           </Link>
-          <Link to="/profile" className="block p-2 rounded-lg text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors mb-1">
+          <Link to="/profile" className="block p-2.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors mb-2 hover:text-primary dark:hover:text-secondary focus:outline-none focus:ring-2 focus:ring-primary/50 dark:focus:ring-secondary/50">
             <div className="flex items-center gap-3 text-sm">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-800 dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-600 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
-              <span>Profile</span>
+              <span className="font-medium">Profile</span>
             </div>
           </Link>
           <button 
             onClick={() => setDarkMode(!darkMode)}
-            className="w-full flex items-center gap-3 p-2 rounded-lg text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-sm"
+            className="w-full flex items-center gap-3 p-2.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-sm hover:text-primary dark:hover:text-secondary focus:outline-none focus:ring-2 focus:ring-primary/50 dark:focus:ring-secondary/50"
           >
             {darkMode ? (
               <>
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-800 dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-600 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
                 </svg>
-                <span>Light Mode</span>
+                <span className="font-medium">Light Mode</span>
               </>
             ) : (
               <>
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-800 dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-600 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
                 </svg>
-                <span>Dark Mode</span>
+                <span className="font-medium">Dark Mode</span>
               </>
             )}
           </button>
+          
+          {isAuthenticated && (
+            <div className="mt-3 p-2 bg-gray-100 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 text-center">
+              <div className="text-xs text-gray-500 dark:text-gray-400">Logged in as</div>
+              <div className="font-medium text-sm text-gray-800 dark:text-white truncate">{currentUser?.name || currentUser?.email || 'User'}</div>
+            </div>
+          )}
         </div>
       </div>
       
@@ -1662,31 +1841,38 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
       
       
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden ml-0 md:ml-0">
-        {/* Header - Notion style */}
-        <header className="bg-background dark:bg-dark-bg shadow-sm border-b border-gray-200 dark:border-gray-700 flex items-center justify-between p-3 md:p-4">
+      <div className="flex-1 flex flex-col overflow-hidden ml-0 md:ml-4">
+        {/* Header - Enhanced modern style */}
+        <header className="bg-white dark:bg-gray-900 shadow-lg border-b border-gray-200 dark:border-gray-700 flex items-center justify-between p-3 md:p-4 z-10 sticky top-0">
           <div className="flex items-center">
             <button 
               onClick={toggleSidebar}
-              className="p-2 rounded-md text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 mr-3"
+              className="p-2 rounded-md text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 mr-3 transition-all duration-300 hover:shadow-sm group focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-secondary focus:ring-opacity-50"
               aria-label="Toggle sidebar"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 group-hover:text-primary dark:group-hover:text-secondary transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
-            <h1 className="text-lg font-medium text-gray-800 dark:text-white truncate md:text-left text-center flex-grow md:flex-grow-0">NiveshPath AI</h1>
+            <h1 className="text-lg font-bold text-gray-800 dark:text-white truncate md:text-left text-center flex-grow md:flex-grow-0 flex items-center">
+              <div className="h-8 w-8 rounded-full bg-primary/10 dark:bg-secondary/20 flex items-center justify-center mr-2 shadow-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-primary dark:text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                </svg>
+              </div>
+              NiveshPath AI
+            </h1>
           </div>
           <div className="flex items-center space-x-2">
             {isAuthenticated && (
-              <span className="text-sm text-gray-800 dark:text-white mr-1 hidden md:inline">
+              <span className="text-sm text-gray-600 dark:text-gray-300 mr-1 hidden md:inline font-medium bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-md">
                 {currentUser?.name || currentUser?.email || 'User'}
               </span>
             )}
             {isMobile ? (
               <button 
                 onClick={startNewChat}
-                className="p-2 rounded-md text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 transition-colors"
+                className="p-2 rounded-md text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 transition-all duration-300 hover:shadow-sm hover:text-primary dark:hover:text-secondary focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-secondary focus:ring-opacity-50"
                 aria-label="New chat"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -1696,134 +1882,234 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
             ) : (
               <button 
                 onClick={clearChat}
-                className="p-2 rounded-md text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 transition-colors"
+                className="p-2 rounded-md text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 transition-all duration-300 hover:shadow-sm hover:text-primary dark:hover:text-secondary focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-secondary focus:ring-opacity-50"
                 disabled={loading || isTyping}
                 aria-label="Clear conversation"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
-                <span className="hidden md:inline text-sm">Clear</span>
+                <span className="hidden md:inline text-sm font-medium">Clear</span>
               </button>
             )}
           </div>
         </header>
         
-        {/* Messages Container - Notion style */}
-        <div className="flex-1 overflow-y-auto bg-background dark:bg-dark-bg pb-20 sm:pb-24">
-          {messages.map((message, index) => (
-            <div 
-              key={message.id} 
-              className={`py-6 px-4 md:px-6 ${message.isBot ? 'bg-background dark:bg-dark-bg' : 'bg-gray-50 dark:bg-gray-800'} border-b border-gray-100 dark:border-gray-800 transition-colors duration-200`}
+        {/* Messages Container - Enhanced modern style */}
+        <div className="flex-1 overflow-y-auto bg-white dark:bg-gray-900 pb-20 sm:pb-24 relative">
+          {/* Welcome message at the start of a new chat */}
+          {/* {showWelcome && messages.length <= 1 && (
+            <WelcomeMessage onDismiss={() => setShowWelcome(false)} />
+          )} */}
+          
+          {/* Down arrow button to scroll to latest answer - Enhanced with animation */}
+          {messages.length > 1 && (
+            <button 
+              onClick={() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })}
+              className="fixed bottom-24 right-6 z-20 p-2.5 rounded-full bg-primary dark:bg-secondary text-white shadow-lg hover:bg-primary-dark dark:hover:bg-secondary-dark transition-all duration-300 border border-primary-light dark:border-secondary-light hover:scale-110 animate-bounce-slow focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-secondary focus:ring-opacity-50"
+              aria-label="Scroll to answer"
+              title="Scroll to see answer"
             >
-              <div className="w-full max-w-3xl mx-auto">
-                {/* User or AI label */}
-                <div className="flex justify-between items-center mb-2">
-                  <div className="font-medium text-sm flex items-center">
-                    <span className={`${message.isBot ? 'text-gray-800 dark:text-white' : 'text-gray-800 dark:text-white'}`}>
-                      {message.isBot ? 'NiveshPath AI' : 'You'}
-                    </span>
-                    {message.isBot && (
-                      <span className="ml-2 text-xs px-1.5 py-0.5 bg-teal-100 dark:bg-teal-900 text-teal-800 dark:text-teal-200 rounded-full">AI</span>
-                    )}
-                  </div>
-                  
-                  {/* No share button here */}
-                </div>
-                
-                {/* Message content */}
-                {message.isBot ? (
-                  <div className="text-gray-800 dark:text-white text-sm sm:text-base prose prose-sm dark:prose-invert max-w-none notion-like-content">
-                    {formatBotMessage(message.text)}
-                    {/* Copy and Share buttons below the message */}
-                    <div className="mt-4 flex justify-end space-x-2">
-                      <button 
-                        onClick={() => {
-                          navigator.clipboard.writeText(message.text);
-                          toast.success('Copied!');
-                        }}
-                        className="text-gray-800 hover:text-gray-900 dark:text-white dark:hover:text-white transition-colors p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-sm flex items-center"
-                        title="Copy answer"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-                        </svg>
-                      </button>
-                      <button 
-                        onClick={() => {
-                          if (navigator.share) {
-                            navigator.share({
-                              title: 'NiveshPath AI Answer',
-                              text: message.text
-                            }).catch(err => console.error('Share failed:', err));
-                          } else {
-                            navigator.clipboard.writeText(message.text);
-                            toast.success('Copied! Now you can share it');
-                          }
-                        }}
-                        className="text-gray-800 hover:text-gray-900 dark:text-white dark:hover:text-white transition-colors p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-sm flex items-center"
-                        title="Share answer"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-gray-800 dark:text-white text-sm sm:text-base whitespace-pre-wrap bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-100 dark:border-blue-800/30">
-                    {message.text}
-                  </div>
-                )}
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+              </svg>
+            </button>
+          )}
+          
+          {/* Empty state when no messages */}
+          {messages.length === 0 && (
+            <div className="h-full flex flex-col items-center justify-center p-8 text-center">
+              <div className="h-16 w-16 rounded-full bg-primary/10 dark:bg-secondary/20 flex items-center justify-center mb-4 shadow-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-primary dark:text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                </svg>
               </div>
-            </div>
-          ))}
-          {isTyping && (
-            <div className="py-6 px-4 md:px-6 bg-background dark:bg-dark-bg border-b border-gray-100 dark:border-gray-800 transition-colors duration-200">
-              <div className="w-full max-w-3xl mx-auto">
-                <div className="font-medium text-sm mb-2 flex items-center">
-                  <span className="text-teal-600 dark:text-teal-400">NiveshPath AI</span>
-                  <span className="ml-2 text-xs px-1.5 py-0.5 bg-teal-100 dark:bg-teal-900 text-teal-800 dark:text-white rounded-full">AI</span>
-                </div>
-                <div className="flex space-x-2 p-2 bg-gray-50 dark:bg-gray-800 rounded-md inline-flex">
-                  <div className="w-2 h-2 bg-teal-600 rounded-full animate-bounce"></div>
-                  <div className="w-2 h-2 bg-teal-600 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                  <div className="w-2 h-2 bg-teal-600 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
-                </div>
+              <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">Welcome to NiveshPath AI</h3>
+              <p className="text-gray-600 dark:text-gray-400 max-w-md mb-6">NiveshPath AI is ready to help with your investment and financial planning needs.</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-lg w-full">
+                <button 
+                  onClick={() => {
+                    setInput("What are the best investment options for beginners?");
+                    handleSubmit({ preventDefault: () => {} });
+                  }}
+                  className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 text-left hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors hover:border-primary dark:hover:border-secondary cursor-pointer"
+                >
+                  <p className="font-medium text-gray-800 dark:text-white text-sm">"What are the best investment options for beginners?"</p>
+                </button>
+                <button 
+                  onClick={() => {
+                    setInput("How should I plan for retirement in my 30s?");
+                    handleSubmit({ preventDefault: () => {} });
+                  }}
+                  className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 text-left hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors hover:border-primary dark:hover:border-secondary cursor-pointer"
+                >
+                  <p className="font-medium text-gray-800 dark:text-white text-sm">"How should I plan for retirement in my 30s?"</p>
+                </button>
               </div>
             </div>
           )}
+          {messages.map((message, index) => (
+            <div 
+              key={message.id} 
+              className="py-6 px-4 md:px-6 transition-colors duration-300"
+              id={`message-${message.id}`}
+            >
+              <div className={`w-full max-w-3xl mx-auto flex ${message.isBot ? 'justify-start' : 'justify-end'}`}>
+                <div className={`${message.isBot ? 'w-full' : 'w-full'}`}>
+                  {/* User or AI label - Enhanced */}
+                  <div className={`flex ${message.isBot ? 'justify-start' : 'justify-end'} items-center mb-2`}>
+                    <div className="font-medium text-sm flex items-center">
+                      {message.isBot ? (
+                        <div className="flex items-center">
+                          <div className="h-7 w-7 rounded-full bg-primary text-white flex items-center justify-center mr-2 shadow-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                            </svg>
+                          </div>
+                          <span className="text-gray-800 dark:text-white">NiveshPath AI</span>
+                          <span className="ml-2 text-xs px-1.5 py-0.5 bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-light rounded-full">AI</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center">
+                          <span className="text-gray-800 dark:text-white">You</span>
+                          <div className="h-7 w-7 rounded-full bg-secondary text-white flex items-center justify-center ml-2 shadow-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Message content */}
+                  {message.isBot ? (
+                    <div className="text-gray-800 dark:text-white text-sm sm:text-base prose prose-sm dark:prose-invert max-w-none notion-like-content">
+                      {/* Always show user's question above bot response */}
+                      {index > 0 && messages[index-1] && !messages[index-1].isBot && (
+                        <div className="text-gray-800 dark:text-white text-sm sm:text-base whitespace-pre-wrap bg-secondary/10 dark:bg-secondary/20 p-4 mb-4 rounded-lg border border-secondary/30 dark:border-secondary/40 font-medium shadow-md">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-semibold bg-secondary/20 dark:bg-secondary/30 text-secondary dark:text-secondary-light px-2 py-0.5 rounded-full">Your Question</span>
+                          </div>
+                          {messages[index-1].text}
+                        </div>
+                      )}
+                      <div>
+                        {formatBotMessage(message.text)}
+                        {/* Copy and Share buttons below the message */}
+                        <div className="mt-4 flex justify-end space-x-2">
+                          <button 
+                            onClick={() => {
+                              navigator.clipboard.writeText(message.text);
+                              console.log('Copied to clipboard');
+                            }}
+                            className="text-gray-800 hover:text-gray-900 dark:text-white dark:hover:text-white transition-colors p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-sm flex items-center group focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-secondary focus:ring-opacity-50"
+                            title="Copy answer"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 group-hover:text-primary dark:group-hover:text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                            </svg>
+                            <span className="ml-1 hidden md:inline text-xs">Copy</span>
+                          </button>
+                          <button 
+                            onClick={() => {
+                              if (navigator.share) {
+                                navigator.share({
+                                  title: 'NiveshPath AI Answer',
+                                  text: message.text
+                                }).catch(err => console.error('Share failed:', err));
+                              } else {
+                                navigator.clipboard.writeText(message.text);
+                                console.log('Copied to clipboard for sharing');
+                              }
+                            }}
+                            className="text-gray-800 hover:text-gray-900 dark:text-white dark:hover:text-white transition-colors p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-sm flex items-center group focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-secondary focus:ring-opacity-50"
+                            title="Share answer"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 group-hover:text-primary dark:group-hover:text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                            </svg>
+                            <span className="ml-1 hidden md:inline text-xs">Share</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-gray-800 dark:text-white text-sm sm:text-base whitespace-pre-wrap bg-secondary/10 dark:bg-secondary/20 p-4 rounded-lg border border-secondary/30 dark:border-secondary/40 font-medium shadow-md hover:shadow-lg transition-shadow duration-300">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-semibold bg-secondary/20 dark:bg-secondary/30 text-secondary dark:text-secondary-light px-2 py-0.5 rounded-full">Your Question</span>
+                      </div>
+                      {message.text}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+          {/* Removed divider lines after questions */}
+          {isTyping && (
+            <div className="py-6 px-4 md:px-6 bg-white dark:bg-gray-800 transition-colors duration-200 border-b border-gray-100 dark:border-gray-700">
+              <div className="w-full max-w-2xl mx-auto">
+                <div className="font-medium text-sm mb-2 flex items-center">
+                  <span className="text-blue-600 dark:text-blue-400">NiveshPath AI</span>
+                  <span className="ml-2 text-xs px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded-full">AI</span>
+                </div>
+                <div className="flex space-x-2 p-2 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm inline-flex">
+                  <div className="w-2 h-2 bg-blue-600 dark:bg-blue-500 rounded-full animate-bounce"></div>
+                  <div className="w-2 h-2 bg-blue-600 dark:bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                  <div className="w-2 h-2 bg-blue-600 dark:bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                </div>
+              </div>
+            </div>  
+          )}
           <div ref={messagesEndRef} />
         </div>
-        
-        {/* Input Form - Notion style */}
-        <div className="bg-background dark:bg-dark-bg border-t border-gray-200 dark:border-gray-700 sticky bottom-0 left-0 right-0 z-10 shadow-md">
-          <form onSubmit={handleSubmit} className="max-w-3xl mx-auto px-4 py-3 md:py-4">
-            {error && <div className="text-red-500 text-sm mb-2">{error}</div>}
-            <div className="relative rounded-xl border border-gray-300 dark:border-gray-600 bg-light-input dark:bg-dark-input shadow-sm overflow-hidden hover:border-blue-400 dark:hover:border-blue-500 transition-colors">
-              <textarea
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder={isAuthenticated ? "Type your question here..." : "Please login to chat..."}
-                className="w-full p-3 md:p-4 pr-12 max-h-32 focus:outline-none bg-transparent text-gray-800 dark:text-white text-sm md:text-base resize-none"
-                disabled={isTyping || loading || !isAuthenticated}
-                rows="1"
-                style={{ minHeight: '54px' }}
-              />
-              <button
-                type="submit"
-                disabled={isTyping || loading || input.trim() === ''}
-                className="absolute right-2 bottom-2 p-2 rounded-full text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                aria-label="Send message"
-              >
+        {/* Input Form - Enhanced modern style */}
+        <div className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 sticky bottom-0 z-10 transition-all duration-300 shadow-lg">
+          <form onSubmit={handleSubmit} className="max-w-3xl mx-auto px-4 py-3 md:py-4 w-full">
+            {/* Removed conditional heading to keep input position consistent */}
+            {error && <div className="text-red-500 text-sm mb-2 font-medium bg-red-50 dark:bg-red-900/20 p-2 rounded-lg border border-red-100 dark:border-red-800/30">{error}</div>}
+            <div className={`relative rounded-xl shadow-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 overflow-hidden hover:border-primary dark:hover:border-secondary transition-all duration-300 mx-auto max-w-3xl ml-auto mr-0 hover:shadow-lg focus-within:border-primary dark:focus-within:border-secondary focus-within:ring-2 focus-within:ring-primary/20 dark:focus-within:ring-secondary/20`}>
+            <textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={isAuthenticated ? "Ask me about investments, financial planning, or any financial questions..." : "Please login to chat..."}
+              className="w-full p-4 pr-14 max-h-40 focus:outline-none bg-transparent text-gray-800 dark:text-white text-sm md:text-base resize-none transition-colors duration-200"
+              disabled={isTyping || loading || !isAuthenticated}
+              rows="1"
+              style={{ minHeight: '56px' }}
+            />
+            <button
+              type="submit"
+              disabled={isTyping || loading || input.trim() === ''}
+              className="absolute right-3 bottom-2.5 p-2.5 rounded-full text-white bg-primary dark:bg-secondary hover:bg-primary-dark dark:hover:bg-secondary-dark disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-300 flex items-center justify-center shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-secondary focus:ring-opacity-50"
+              aria-label="Send message"
+            >
+              {isTyping ? (
+                <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              ) : input.trim() === '' ? (
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
                 </svg>
-              </button>
-            </div>
-            <div className="text-xs text-center mt-2 text-gray-800 dark:text-white">
-              NiveshPath AI assistant is ready to answer your financial questions.
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
+                </svg>
+              )}
+            </button>
+          </div>
+            <div className="flex justify-between items-center mt-2 text-xs text-gray-500 dark:text-gray-400">
+              <div className="hidden md:flex items-center">
+                <kbd className="px-1.5 py-0.5 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-100 dark:bg-gray-800 font-sans mr-1 shadow-sm">Enter</kbd> 
+                <span>to send</span>
+              </div>
+              <div className="text-center w-full md:w-auto">
+                <span className="font-medium text-primary dark:text-secondary">NiveshPath AI</span> is ready to help with your investment and financial planning needs.
+              </div>
             </div>
           </form>
         </div>
@@ -1835,7 +2121,8 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
           .notion-like-content h4, .notion-like-content h5, .notion-like-content h6 {
             margin-top: 1.5em;
             margin-bottom: 0.5em;
-            font-weight: 600;
+            font-weight: 700;
+            font-size: 1.5em;
             color: inherit;
           }
           
@@ -1920,6 +2207,36 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
           
           .dark .notion-like-content tr:nth-child(even) {
             background-color: #2a2a2a;
+          }
+          
+          /* Custom animations */
+          @keyframes bounce-slow {
+            0%, 100% {
+              transform: translateY(0);
+            }
+            50% {
+              transform: translateY(-5px);
+            }
+          }
+          
+          .animate-bounce-slow {
+            animation: bounce-slow 2s infinite;
+          }
+          
+          /* Transition effects */
+          .transition-all {
+            transition-property: all;
+            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+          }
+          
+          /* Hover effects */
+          .hover-card {
+            transition: all 0.3s ease;
+          }
+          
+          .hover-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
           }
         `}</style>
       </div>

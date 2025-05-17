@@ -42,8 +42,8 @@ const Register = () => {
         password: formData.password
       });
       
-      toast.success('Registration successful! Please complete onboarding.');
-      navigate('/onboarding');
+      toast.success('Registration successful! Please verify your email.');
+      navigate('/verify-email');
       
     } catch (error) {
       console.error('Registration error:', error);

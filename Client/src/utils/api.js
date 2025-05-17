@@ -35,7 +35,13 @@ async function apiRequest(endpoint, options = {}) {
     
     if (!response.ok) {
       console.error(`API Error: ${endpoint}`, data);
-      throw new Error(data.message || 'Something went wrong');
+      const error = new Error(data.message || 'Something went wrong');
+      // Add response data to the error object for better error handling
+      error.response = {
+        status: response.status,
+        data: data
+      };
+      throw error;
     }
     
     return data;
@@ -73,6 +79,48 @@ export const authAPI = {
   // Verify token
   verifyToken: () => {
     return apiRequest('/auth/me');
+  },
+
+  forgotPassword: (data) => {
+    return apiRequest('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
+  verifyOTP: (data) => {
+    return apiRequest('/auth/verify-otp', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
+  resetPassword: (data) => {
+    return apiRequest('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
+  sendVerificationEmail: (data) => {
+    return apiRequest('/auth/send-verification-email', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
+  verifyEmail: (data) => {
+    return apiRequest('/auth/verify-email', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
+  changePassword: (data) => {
+    return apiRequest('/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
   }
 };
 

@@ -17,7 +17,7 @@ export default {
         
         /* Modern & Youthful Color Scheme (Current) */
         primary: '#000000', /* Black */
-        secondary: '#FFFFFF', /* White */
+        secondary: '#00B370', /* Green - Changed from white for better contrast in light mode */
         accent: '#0077FF', /* Electric Blue */
         background: '#FFFFFF', /* White */
         text: '#1A1A1A', /* Almost Black */
@@ -25,10 +25,10 @@ export default {
         'light-sidebar': '#F9F9F9', /* Light Gray */
         
         /* Dark Mode Colors */
-        'dark-bg': '#212121',
+        'dark-bg': '#121212',
         'dark-text': '#E0E0E0',
-        'dark-input': '#303030',
-        'dark-sidebar': '#171717'
+        'dark-input': '#1E1E1E',
+        'dark-sidebar': '#0A0A0A'
       },
       fontFamily: {
         /* Professional Fonts */

@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { useAuth } from '../contexts/AuthContext';
+import { authAPI } from '../utils/api';
+import Skeleton from '../components/Skeleton';
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -9,6 +11,9 @@ const Login = () => {
     password: ''
   });
   const [loading, setLoading] = useState(false);
+  const [verificationNeeded, setVerificationNeeded] = useState(false);
+  const [verificationEmail, setVerificationEmail] = useState('');
+  const [sendingVerification, setSendingVerification] = useState(false);
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -18,33 +23,78 @@ const Login = () => {
       [name]: value
     }));
   };
-
-  const { login } = useAuth();
+  const { login, onboardingCompleted } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setVerificationNeeded(false);
     
     try {
       // Use the login function from AuthContext
-      await login({
+      const result = await login({
         email: formData.email,
         password: formData.password
       });
       
       toast.success('Login successful!');
-      navigate('/dashboard');
+      
+      // If onboarding is not completed, redirect to onboarding page
+      if (!onboardingCompleted) {
+        navigate('/onboarding');
+      } else {
+        // Otherwise redirect to dashboard
+        navigate('/dashboard');
+      }
       
     } catch (error) {
-      console.error('Login error:', error);
-      toast.error(error.message || 'Login failed. Please check your credentials.');
+      // Login error occurred
+      
+      // Check if the error is due to email not being verified
+      if (error.message && error.message.includes('Email not verified')) {
+        setVerificationNeeded(true);
+        setVerificationEmail(formData.email);
+        toast.error('Email not verified. Please verify your email to continue.');
+      } else {
+        toast.error(error.message || 'Login failed. Please check your credentials.');
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  const handleResendVerification = async () => {
+    if (!verificationEmail) return;
+    
+    setSendingVerification(true);
+    try {
+      await authAPI.sendVerificationEmail({ email: verificationEmail });
+      toast.success('Verification email sent successfully. Please check your inbox.');
+    } catch (error) {
+      // Error sending verification email
+      toast.error(error.message || 'Failed to send verification email. Please try again.');
+    } finally {
+      setSendingVerification(false);
+    }
+  };
+
+  // Render skeleton during loading
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background dark:bg-gray-900 py-8 px-4 sm:py-12 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full space-y-6 sm:space-y-8 card p-6 sm:p-8">
+          <div className="text-center">
+            <Skeleton type="text" className="w-3/4 h-8 mx-auto mb-2" />
+            <Skeleton type="text" className="w-1/2 h-4 mx-auto" />
+          </div>
+          <Skeleton.Form fields={3} />
+        </div>
+      </div>
+    );
+  }
+  
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background dark:bg-dark-bg py-8 px-4 sm:py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-background dark:bg-gray-900 py-8 px-4 sm:py-12 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-6 sm:space-y-8 card p-6 sm:p-8">
         <div>
           <h2 className="mt-4 sm:mt-6 text-center text-2xl sm:text-3xl font-extrabold text-primary dark:text-white">
@@ -91,6 +141,11 @@ const Login = () => {
                 />
               </div>
             </div>
+            <div className="text-sm">
+              <Link to="/reset-password" className="font-medium text-secondary hover:text-accent">
+                Forgot your password?
+              </Link>
+            </div>
           </div>
 
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mt-3 sm:mt-4 space-y-2 sm:space-y-0">
@@ -106,11 +161,7 @@ const Login = () => {
               </label>
             </div>
 
-            <div className="text-xs sm:text-sm">
-              <a href="#" className="font-medium text-secondary hover:text-accent">
-                Forgot Password?
-              </a>
-            </div>
+         
           </div>
 
           <div className="mt-4 sm:mt-6">
@@ -119,9 +170,25 @@ const Login = () => {
               disabled={loading}
               className="btn w-full flex justify-center items-center py-2 sm:py-3 text-sm sm:text-base"
             >
-              {loading ? 'Signing in...' : 'Sign In'}
+              {loading ? 'Signing in...' : 'Sign in'}
             </button>
           </div>
+          
+          {verificationNeeded && (
+            <div className="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/30 rounded-md">
+              <p className="text-sm text-yellow-800 dark:text-yellow-200 mb-2">
+                Your email is not verified. Please check your inbox for the verification link or click below to resend it.
+              </p>
+              <button
+                type="button"
+                onClick={handleResendVerification}
+                disabled={sendingVerification}
+                className="text-sm font-medium text-secondary hover:text-accent focus:outline-none"
+              >
+                {sendingVerification ? 'Sending...' : 'Resend verification email'}
+              </button>
+            </div>
+          )}
         </form>
       </div>
     </div>

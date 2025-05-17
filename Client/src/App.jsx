@@ -8,8 +8,12 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
 import Onboarding from './pages/Onboarding'
+import OnboardingChatbot from './pages/OnboardingChatbot'
 import Chatbot from './pages/Chatbot'
 import Profile from './pages/Profile'
+import EmailVerification from './pages/EmailVerification'
+import ResetPassword from './pages/ResetPassword'
+import ChangePassword from './pages/ChangePassword'
 
 // Tools
 import SIPCalculator from './pages/tools/SIPCalculator'
@@ -62,7 +66,18 @@ function App() {
         <Route path="/" element={<Landing darkMode={darkMode} setDarkMode={setDarkMode} />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/onboarding" element={<Onboarding />} />
+        <Route path="/verify-email" element={<EmailVerification />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/onboarding" element={
+          <ProtectedRoute>
+            <Onboarding />
+          </ProtectedRoute>
+        } />
+        <Route path="/onboarding-chatbot" element={
+          <ProtectedRoute>
+            <OnboardingChatbot />
+          </ProtectedRoute>
+        } />
         
         {/* Protected Routes */}
         <Route path="/dashboard" element={
@@ -78,6 +93,11 @@ function App() {
         <Route path="/profile" element={
           <ProtectedRoute>
             <Profile darkMode={darkMode} setDarkMode={setDarkMode} />
+          </ProtectedRoute>
+        } />
+        <Route path="/change-password" element={
+          <ProtectedRoute>
+            <ChangePassword />
           </ProtectedRoute>
         } />
         

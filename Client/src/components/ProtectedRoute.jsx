@@ -14,20 +14,12 @@ const ProtectedRoute = ({ children }) => {
     return <Navigate to="/login" replace />;
   }
   
-  // If authenticated, render the protected component
-  return children;
-  
-  // Show loading while verifying
-  if (isVerifying) {
-    return <div className="min-h-screen flex items-center justify-center">Verifying authentication...</div>;
+  // If email is not verified, redirect to email verification page
+  if (currentUser && !currentUser.isEmailVerified) {
+    return <Navigate to="/verify-email" replace />;
   }
   
-  // If not authenticated, redirect to login page
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-  
-  // If authenticated, render the protected component
+  // If authenticated and email verified, render the protected component
   return children;
 };
 

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { useAuth } from '../contexts/AuthContext';
 import apiService from '../services/api';
+import Skeleton from '../components/Skeleton';
 import { APP_NAME, APP_DESCRIPTION } from '../config';
 
 const Profile = ({ darkMode, setDarkMode }) => {
@@ -309,6 +310,33 @@ const Profile = ({ darkMode, setDarkMode }) => {
     }
   };
 
+  const handleChangePassword = () => {
+    navigate('/change-password');
+  };
+
+  // Add a button to change password in the profile form
+  const renderChangePasswordButton = () => {
+    return (
+      <div className="mt-4 flex justify-between">
+        <Link
+          to="/change-password"
+          className="px-4 py-2 bg-secondary text-white rounded-md hover:bg-secondary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary"
+        >
+          Change Password
+        </Link>
+        {isEditing && (
+          <button
+            type="submit"
+            className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+            disabled={loading}
+          >
+            {loading ? 'Saving...' : 'Save Changes'}
+          </button>
+        )}
+      </div>
+    );
+  };
+
   const handleLogout = () => {
     localStorage.removeItem('token');
     toast.success('You have been successfully logged out!');
@@ -335,10 +363,47 @@ const Profile = ({ darkMode, setDarkMode }) => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Render skeleton loader when data is loading
+  if (loading && !dataLoaded) {
+    return (
+      <div className="min-h-screen bg-background dark:bg-gray-900 py-8 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-5xl mx-auto">
+          <div className="flex justify-between items-center mb-6">
+            <Skeleton type="text" className="w-1/4 h-8" />
+            <Skeleton type="rect" width={120} height={40} className="rounded-md" />
+          </div>
+          
+          <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
+            <div className="p-6 sm:p-8 border-b border-gray-200 dark:border-gray-700">
+              <Skeleton.Profile className="mb-6" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                <Skeleton.Form fields={4} />
+                <Skeleton.Form fields={4} />
+              </div>
+            </div>
+            
+            <div className="p-6 sm:p-8 border-b border-gray-200 dark:border-gray-700">
+              <Skeleton type="text" className="w-1/3 h-6 mb-4" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Skeleton.Form fields={3} />
+                <Skeleton.Form fields={3} />
+              </div>
+            </div>
+            
+            <div className="p-6 sm:p-8">
+              <Skeleton type="text" className="w-1/3 h-6 mb-4" />
+              <Skeleton.Form fields={3} />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
   return (
-    <div className="min-h-screen bg-background dark:bg-dark-bg overflow-hidden">
+    <div className="min-h-screen bg-background dark:bg-gray-900 overflow-hidden">
       {/* Header/Navigation */}
-      <header className="bg-white dark:bg-primary shadow-sm">
+      <header className="bg-white dark:bg-gray-900 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex">
@@ -378,12 +443,22 @@ const Profile = ({ darkMode, setDarkMode }) => {
 
       {/* Main Content - adjusted padding for mobile */}
       <main className="max-w-7xl mx-auto py-6 sm:py-8 px-4 sm:px-6 lg:px-8 pb-24 md:pb-8">
-        <div className="bg-white dark:bg-gray-800 shadow overflow-hidden rounded-lg">
+        <div className="bg-white dark:bg-gray-900 shadow overflow-hidden rounded-lg">
           {/* Profile Header */}
           <div className="px-4 py-5 sm:px-6 border-b border-gray-200 dark:border-gray-700">
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center">
               <div>
-                <h3 className="text-lg sm:text-xl leading-6 font-medium text-primary dark:text-white">User Profile</h3>
+                <div className="flex items-center">
+                  <h3 className="text-lg sm:text-xl leading-6 font-medium text-primary dark:text-white">User Profile</h3>
+                  {currentUser?.isEmailVerified && (
+                    <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                      <svg className="-ml-0.5 mr-1.5 h-2 w-2 text-green-400" fill="currentColor" viewBox="0 0 8 8">
+                        <circle cx="4" cy="4" r="3" />
+                      </svg>
+                      Email Verified
+                    </span>
+                  )}
+                </div>
                 <p className="mt-1 max-w-2xl text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                   {APP_DESCRIPTION} - Personal details and investment preferences
                 </p>
@@ -604,6 +679,16 @@ const Profile = ({ darkMode, setDarkMode }) => {
                     />
                   </div>
                 </div>
+              </div>
+            )}
+            
+            {/* Add Change Password Button */}
+            {!isEditing && dataLoaded && (
+              <div className="mt-8 border-t border-gray-200 dark:border-gray-700 pt-6">
+                <h4 className="text-base sm:text-lg font-medium text-primary dark:text-white mb-4 sm:mb-5 pb-2">
+                  Account Security
+                </h4>
+                {renderChangePasswordButton()}
               </div>
             )}
           </div>

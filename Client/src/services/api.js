@@ -28,18 +28,26 @@ const apiService = {
     login: (credentials) => api.post('/auth/login', credentials),
     register: (userData) => api.post('/auth/register', userData),
     verifyToken: () => api.get('/auth/verify'),
+    forgotPassword: (data) => api.post('/auth/forgot-password', data),
+    verifyOTP: (data) => api.post('/auth/verify-otp', data),
+    resetPassword: (data) => api.post('/auth/reset-password', data),
+    sendVerificationEmail: (data) => api.post('/auth/send-verification-email', data),
+    verifyEmail: (data) => api.post('/auth/verify-email', data),
+    changePassword: (data) => api.post('/auth/change-password', data),
   },
   
   // User endpoints
   user: {
     getProfile: () => api.get('/user/profile'),
     updateProfile: (profileData) => api.put('/user/profile', profileData),
+    checkOnboardingStatus: () => api.get('/user/onboarding-status'),
   },
   
   // Onboarding endpoints
   onboarding: {
     submitOnboarding: (onboardingData) => api.post('/onboarding', onboardingData),
-    // getOnboardingStatus endpoint removed as it's not available on backend
+    getOnboardingStatus: () => api.get('/onboarding/status'),
+    submitChatbotOnboarding: (onboardingData) => api.post('/onboarding/chatbot', onboardingData),
   },
   
   // Tools endpoints
@@ -57,12 +65,20 @@ const apiService = {
   },
   
   // Chatbot endpoints
-  chatbot: {
-    sendMessage: (message) => api.post('/chatbot/query', { query: message }),
-    getHistory: () => api.get('/chatbot/history'),
-    getUserHistory: (userId) => api.get(`/chatbot/history/${userId}`),
-    deleteChat: (chatId) => api.delete(`/chatbot/chat/${chatId}`),
-    clearAllHistory: () => api.delete('/chatbot/history'),
+chatbot: {
+  sendMessage: (message) => api.post('/chatbot/query', { query: message }),
+  getHistory: () => api.get('/chatbot/history'),
+  getUserHistory: (userId) => {
+    try {
+      return api.get(`/chatbot/session/${userId}`);
+    } catch (error) {
+      console.error('Error fetching user history:', error);
+      // Fallback to general history if user-specific endpoint fails
+      return api.get('/chatbot/history');
+    }
+  },
+  deleteChat: (chatId) => api.delete(`/chatbot/chat/${chatId}`),
+  clearAllHistory: () => api.delete('/chatbot/history'),
   },
 };
 

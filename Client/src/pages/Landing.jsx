@@ -33,12 +33,17 @@ const Landing = ({ darkMode, setDarkMode }) => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background dark:bg-dark-bg overflow-hidden">
+    <div className="min-h-screen bg-background dark:bg-gray-900 overflow-hidden">
       {/* Navigation */}
-      <nav className="bg-white dark:bg-primary shadow-sm">
+      <nav className="bg-white dark:bg-gray-900 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex">
+          <div className="flex justify-between h-16 relative">
+            {/* Mobile: Logo centered absolutely */}
+            <div className="md:hidden absolute left-0 right-0 mx-auto flex justify-center items-center h-full z-10">
+              <h1 className="text-xl sm:text-2xl font-bold text-primary dark:text-white">{APP_NAME}</h1>
+            </div>
+            {/* Desktop: Logo aligned left */}
+            <div className="hidden md:flex md:flex-1">
               <div className="flex-shrink-0 flex items-center">
                 <h1 className="text-xl sm:text-2xl font-bold text-primary dark:text-white">{APP_NAME}</h1>
               </div>
@@ -72,7 +77,7 @@ const Landing = ({ darkMode, setDarkMode }) => {
                 Get Started
               </button>
             </div>
-            <div className="-mr-2 flex items-center md:hidden">
+            <div className="-mr-2 flex items-center md:hidden z-20">
               <button
                 onClick={() => setMenuOpen(!menuOpen)}
                 className="inline-flex items-center justify-center p-2 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-secondary transition-colors duration-200"
@@ -150,7 +155,7 @@ const Landing = ({ darkMode, setDarkMode }) => {
       </nav>
 
       {/* Hero Section - Improved spacing for mobile */}
-      <div className="bg-background dark:bg-dark-bg py-6 sm:py-10 md:py-20 pt-8 sm:pt-12 md:pt-24">
+      <div className="bg-background dark:bg-gray-900 py-6 sm:py-10 md:py-20 pt-8 sm:pt-12 md:pt-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="lg:grid lg:grid-cols-12 lg:gap-8">
             <div className="text-center lg:text-left sm:mx-auto md:max-w-2xl lg:col-span-6">
