@@ -2,6 +2,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { APP_NAME, APP_DESCRIPTION } from '../config';
+import RBINews from '../components/RBINews';
 
 const Landing = ({ darkMode, setDarkMode }) => {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -375,6 +376,22 @@ const Landing = ({ darkMode, setDarkMode }) => {
                 </svg>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* RBI Updates Section */}
+      <div className="py-8 sm:py-12 bg-background dark:bg-dark-bg">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <h2 className="text-sm sm:text-base text-secondary font-semibold tracking-wide uppercase">Latest Updates</h2>
+            <p className="mt-2 text-xl sm:text-2xl md:text-3xl leading-8 font-extrabold tracking-tight text-primary dark:text-white">
+              RBI Updates & Financial News
+            </p>
+          </div>
+          
+          <div className="mt-8 sm:mt-10">
+            <RBINews />
           </div>
         </div>
       </div>

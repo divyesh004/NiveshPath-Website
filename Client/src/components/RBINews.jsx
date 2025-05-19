@@ -28,8 +28,8 @@ const RBINews = () => {
       } catch (err) {
         console.error('Error fetching RBI news:', err);
         setError('Problem loading RBI news');
-        // Default fallback image URL
-        const fallbackImageUrl = 'https://en.wikipedia.org/wiki/Reserve_Bank_of_India#/media/File:Seal_of_the_Reserve_Bank_of_India.svg';
+        // Default fallback image URL - direct image URL from reliable source
+        const fallbackImageUrl = 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/Seal_of_the_Reserve_Bank_of_India.svg/2048px-Seal_of_the_Reserve_Bank_of_India.svg.png';
         
         // Fallback data with isFallback flag
         setNewsData([
@@ -39,7 +39,7 @@ const RBINews = () => {
             summary: 'Reserve Bank of India maintains repo rate at current levels. Governor emphasizes focus on inflation control.',
             date: new Date().toISOString().split('T')[0],
             source: 'RBI Direct Source',
-            url: 'https://www.rbi.org.in/Scripts/BS_PressReleaseDisplay.aspx',
+            url: 'https://www.rbi.org.in/',
             imageUrl: fallbackImageUrl,
             isFallback: true
           },
@@ -93,15 +93,18 @@ const RBINews = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-2">
             {newsData.map((news) => (
               <div key={news.id} className={`card p-4 hover:shadow-md transition-shadow ${news.isFallback ? 'border border-yellow-400 dark:border-yellow-600' : ''}`}>
-                {news.imageUrl && (
-                  <div className="mb-3">
-                    <img 
-                      src={news.imageUrl} 
-                      alt={news.title} 
-                      className="w-full h-40 object-cover rounded-md"
-                    />
-                  </div>
-                )}
+                <div className="mb-3">
+                  <img 
+                    src={news.imageUrl || 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/Seal_of_the_Reserve_Bank_of_India.svg/2048px-Seal_of_the_Reserve_Bank_of_India.svg.png'} 
+                    alt={news.title} 
+                    className="w-full h-40 object-cover rounded-md"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/Seal_of_the_Reserve_Bank_of_India.svg/2048px-Seal_of_the_Reserve_Bank_of_India.svg.png';
+                      e.target.className = "w-full h-40 object-contain p-2 rounded-md";
+                    }}
+                  />
+                </div>
               <h4 className="text-lg font-medium text-primary dark:text-white mb-2">{news.title}</h4>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">{news.summary}</p>
               <div className="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400">

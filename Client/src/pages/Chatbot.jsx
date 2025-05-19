@@ -17,17 +17,32 @@ const formatBotMessage = (text) => {
     // Check if this is a greeting message (typically very short)
     const isGreeting = text.length < 20;
     
+    // Generate a unique ID for this code block
+    const codeId = `code-${Math.random().toString(36).substring(2, 10)}`;
+    
     return `<div class="bg-gray-100 dark:bg-gray-900 rounded-lg p-3 my-3 overflow-x-auto font-mono text-sm border border-gray-200 dark:border-gray-700 shadow-sm">
       <div class="flex justify-between items-center mb-2">
         <span class="text-xs text-gray-800 dark:text-white font-medium">${lang ? lang.toUpperCase() : 'CODE'}</span>
-        ${!isGreeting ? `<button class="text-xs text-gray-800 hover:text-gray-900 dark:text-white dark:hover:text-white transition-colors" title="Copy code">
+        ${!isGreeting ? `<button class="text-xs text-gray-800 hover:text-gray-900 dark:text-white dark:hover:text-white transition-colors" title="Copy code" onclick="(function() {
+          const codeElement = document.getElementById('${codeId}');
+          if (codeElement) {
+            navigator.clipboard.writeText(codeElement.textContent);
+            // Show copy feedback
+            const btn = this;
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'16\' height=\'16\' fill=\'currentColor\' viewBox=\'0 0 16 16\'><path d=\'M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z\'/></svg>';
+            setTimeout(() => {
+              btn.innerHTML = originalHTML;
+            }, 2000);
+          }
+        }).call(this)">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
             <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/>
             <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/>
           </svg>
         </button>` : ''}
       </div>
-      <pre class="m-0 p-0 bg-transparent border-0${langClass}"><code class="text-gray-800 dark:text-white${langClass}">${sanitizedCode}</code></pre>
+      <pre class="m-0 p-0 bg-transparent border-0${langClass}"><code id="${codeId}" class="text-gray-800 dark:text-white${langClass}">${sanitizedCode}</code></pre>
     </div>`;
   });
   
@@ -71,6 +86,11 @@ const formatBotMessage = (text) => {
       return 'text-left';
     });
     
+    // Ensure alignments array has same length as headerCells
+    while (alignments.length < headerCells.length) {
+      alignments.push('text-left');
+    }
+    
     // Generate a unique ID for this table
     const tableId = `table-${Math.random().toString(36).substring(2, 10)}`;
     
@@ -86,12 +106,36 @@ const formatBotMessage = (text) => {
           <span class="text-xs text-gray-800 dark:text-white">${headerCells.length} columns</span>
         </div>
         <div class="flex items-center space-x-2">
-          <button class="text-xs text-gray-800 hover:text-gray-900 dark:text-white dark:hover:text-gray-200 transition-colors p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-800" title="Toggle compact view" onclick="document.getElementById('${tableId}').classList.toggle('compact-table')">
+          <button class="text-xs text-gray-800 hover:text-gray-900 dark:text-white dark:hover:text-gray-200 transition-colors p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-800" title="Toggle compact view" onclick="(function() { try { const table = document.getElementById('${tableId}'); if(table) { table.classList.toggle('compact-table'); } } catch(error) { console.error('Error toggling compact view:', error); } }).call(this)">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
               <path d="M1 2.5A1.5 1.5 0 0 1 2.5 1h3A1.5 1.5 0 0 1 7 2.5v3A1.5 1.5 0 0 1 5.5 7h-3A1.5 1.5 0 0 1 1 5.5v-3zm8 0A1.5 1.5 0 0 1 10.5 1h3A1.5 1.5 0 0 1 15 2.5v3A1.5 1.5 0 0 1 13.5 7h-3A1.5 1.5 0 0 1 9 5.5v-3zm-8 8A1.5 1.5 0 0 1 2.5 9h3A1.5 1.5 0 0 1 7 10.5v3A1.5 1.5 0 0 1 5.5 15h-3A1.5 1.5 0 0 1 1 13.5v-3zm8 0A1.5 1.5 0 0 1 10.5 9h3a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5h-3A1.5 1.5 0 0 1 9 13.5v-3z"/>
             </svg>
           </button>
-          <button class="text-xs text-gray-800 hover:text-gray-900 dark:text-white dark:hover:text-gray-200 transition-colors p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-800" title="Copy table data" onclick="navigator.clipboard.writeText(document.getElementById('${tableId}').innerText)">
+          <button class="text-xs text-gray-800 hover:text-gray-900 dark:text-white dark:hover:text-gray-200 transition-colors p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-800" title="Copy table data" onclick="(function() {
+            try {
+              const table = document.getElementById('${tableId}');
+              if (table) {
+                const rows = table.querySelectorAll('tr');
+                let text = '';
+                rows.forEach(row => {
+                  const cells = row.querySelectorAll('th, td');
+                  const rowData = [];
+                  cells.forEach(cell => rowData.push(cell.textContent.trim()));
+                  text += rowData.join('\t') + '\n';
+                });
+                navigator.clipboard.writeText(text);
+                // Show copy feedback
+                const btn = this;
+                const originalHTML = btn.innerHTML;
+                btn.innerHTML = '<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'14\' height=\'14\' fill=\'currentColor\' viewBox=\'0 0 16 16\'><path d=\'M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z\'/></svg>';
+                setTimeout(() => {
+                  btn.innerHTML = originalHTML;
+                }, 2000);
+              }
+            } catch (error) {
+              console.error('Error copying table data:', error);
+            }
+          }).call(this)">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
               <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/>
               <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/>
@@ -109,7 +153,7 @@ const formatBotMessage = (text) => {
     tableHtml += `<tr class="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">`;
     headerCells.forEach((cell, index) => {
       const alignment = alignments[index] || 'text-left';
-      tableHtml += `<th class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 font-semibold ${alignment} text-gray-800 dark:text-white text-sm uppercase tracking-wider sticky top-0 bg-gray-50 dark:bg-gray-900 z-10 shadow-sm">${cell}</th>`;
+      tableHtml += `<th class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 font-semibold ${alignment} text-gray-800 dark:text-white text-sm uppercase tracking-wider sticky top-0 bg-gray-50 dark:bg-gray-900 z-10 shadow-sm backdrop-blur-sm backdrop-filter">${cell}</th>`; // Enhanced Notion-like header
     });
     tableHtml += '</tr></thead>';
     
@@ -324,12 +368,36 @@ const formatBotMessage = (text) => {
           <span class="text-xs text-gray-800 dark:text-white">${columnCount} columns</span>
         </div>
         <div class="flex items-center space-x-2">
-          <button class="text-xs text-gray-800 hover:text-gray-900 dark:text-white dark:hover:text-gray-200 transition-colors p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-800" title="Toggle compact view" onclick="document.getElementById('${tableId}').classList.toggle('compact-table')">
+          <button class="text-xs text-gray-800 hover:text-gray-900 dark:text-white dark:hover:text-gray-200 transition-colors p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-800" title="Toggle compact view" onclick="(function() { try { const table = document.getElementById('${tableId}'); if(table) { table.classList.toggle('compact-table'); } } catch(error) { console.error('Error toggling compact view:', error); } }).call(this)">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
               <path d="M1 2.5A1.5 1.5 0 0 1 2.5 1h3A1.5 1.5 0 0 1 7 2.5v3A1.5 1.5 0 0 1 5.5 7h-3A1.5 1.5 0 0 1 1 5.5v-3zm8 0A1.5 1.5 0 0 1 10.5 1h3A1.5 1.5 0 0 1 15 2.5v3A1.5 1.5 0 0 1 13.5 7h-3A1.5 1.5 0 0 1 9 5.5v-3zm-8 8A1.5 1.5 0 0 1 2.5 9h3A1.5 1.5 0 0 1 7 10.5v3A1.5 1.5 0 0 1 5.5 15h-3A1.5 1.5 0 0 1 1 13.5v-3zm8 0A1.5 1.5 0 0 1 10.5 9h3a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5h-3A1.5 1.5 0 0 1 9 13.5v-3z"/>
             </svg>
           </button>
-          <button class="text-xs text-gray-800 hover:text-gray-900 dark:text-white dark:hover:text-gray-200 transition-colors p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-800" title="Copy table data" onclick="navigator.clipboard.writeText(document.getElementById('${tableId}').innerText)">
+          <button class="text-xs text-gray-800 hover:text-gray-900 dark:text-white dark:hover:text-gray-200 transition-colors p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-800" title="Copy table data" onclick="(function() {
+            try {
+              const table = document.getElementById('${tableId}');
+              if (table) {
+                const rows = table.querySelectorAll('tr');
+                let text = '';
+                rows.forEach(row => {
+                  const cells = row.querySelectorAll('th, td');
+                  const rowData = [];
+                  cells.forEach(cell => rowData.push(cell.textContent.trim()));
+                  text += rowData.join('\t') + '\n';
+                });
+                navigator.clipboard.writeText(text);
+                // Show copy feedback
+                const btn = this;
+                const originalHTML = btn.innerHTML;
+                btn.innerHTML = '<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'14\' height=\'14\' fill=\'currentColor\' viewBox=\'0 0 16 16\'><path d=\'M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z\'/></svg>';
+                setTimeout(() => {
+                  btn.innerHTML = originalHTML;
+                }, 2000);
+              }
+            } catch (error) {
+              console.error('Error copying table data:', error);
+            }
+          }).call(this)">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
               <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/>
               <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/>
@@ -347,11 +415,16 @@ const formatBotMessage = (text) => {
     
     // First row gets special styling as a pseudo-header
     const firstRowCells = tableRows[0].split('|').slice(1, -1).map(cell => cell.trim());
+    
+    // Define alignments for each column (defaulting to left-aligned)
+    const alignments = firstRowCells.map(() => 'text-left');
+    
     tableHtml += `<tr class="${isInvestmentData ? 'bg-blue-50 dark:bg-indigo-950' : 'bg-gray-50 dark:bg-gray-900'} border-b border-gray-200 dark:border-gray-700">`;
     firstRowCells.forEach(cell => {
-      tableHtml += `<th class="px-4 py-3 whitespace-normal font-semibold text-sm uppercase tracking-wider ${isInvestmentData ? 'text-gray-800 dark:text-white' : 'text-gray-800 dark:text-white'} border-b border-gray-200 dark:border-gray-700 shadow-sm">${cell}</th>`;
+      tableHtml += `<th class="px-4 py-3 whitespace-normal font-semibold text-sm uppercase tracking-wider ${isInvestmentData ? 'text-gray-800 dark:text-white' : 'text-gray-800 dark:text-white'} border-b border-gray-200 dark:border-gray-700 shadow-sm backdrop-blur-sm backdrop-filter">${cell}</th>`; // Enhanced Notion-like header
     });
     tableHtml += '</tr>';
+
     
     // Add remaining rows with consistent background color and hover effects
     tableRows.slice(1).forEach((row, rowIndex) => {
@@ -542,16 +615,30 @@ const formatBotMessage = (text) => {
     return `<h${level} class="font-bold ${fontSize} my-4 border-b border-gray-200 dark:border-gray-700 pb-2 text-gray-800 dark:text-white">${content}</h${level}>`;
   });
   
-  // Process bullet points with improved styling and indentation
+  // Process bullet points with improved Notion-like styling and indentation
   formattedText = formattedText.replace(/^(\s*)[-*]\s+(.+)$/gm, (match, indent, content) => {
-    const indentClass = indent.length ? `ml-${indent.length * 4}` : '';
-    return `<div class="flex items-start my-1.5 ${indentClass}"><span class="mr-2 mt-1 text-primary dark:text-secondary">•</span><span class="text-gray-800 dark:text-white">${content}</span></div>`;
+    const indentLevel = indent.length;
+    const indentClass = indentLevel ? `ml-${indentLevel * 6}` : '';
+    
+    return `<div class="flex items-start my-2 ${indentClass} group">
+      <div class="flex-shrink-0 w-6 h-6 flex items-center justify-center">
+        <span class="w-1.5 h-1.5 rounded-full bg-primary dark:bg-secondary group-hover:scale-110 transition-transform"></span>
+      </div>
+      <span class="text-gray-800 dark:text-white flex-1">${content}</span>
+    </div>`;
   });
   
-  // Process numbered lists with improved styling and indentation
+  // Process numbered lists with improved Notion-like styling and indentation
   formattedText = formattedText.replace(/^(\s*)(\d+)\.\s+(.+)$/gm, (match, indent, number, content) => {
-    const indentClass = indent.length ? `ml-${indent.length * 4}` : '';
-    return `<div class="flex items-start my-1.5 ${indentClass}"><span class="mr-2 min-w-[1.5rem] font-medium text-primary dark:text-secondary">${number}.</span><span class="text-gray-800 dark:text-white">${content}</span></div>`;
+    const indentLevel = indent.length;
+    const indentClass = indentLevel ? `ml-${indentLevel * 6}` : '';
+    
+    return `<div class="flex items-start my-2 ${indentClass} group">
+      <div class="flex-shrink-0 w-6 h-6 flex items-center justify-center">
+        <span class="w-5 h-5 flex items-center justify-center text-xs font-medium text-primary dark:text-secondary group-hover:scale-110 transition-transform">${number}.</span>
+      </div>
+      <span class="text-gray-800 dark:text-white flex-1">${content}</span>
+    </div>`;
   });
   
   // Process bold text with improved styling
@@ -959,15 +1046,15 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showWelcome, setShowWelcome] = useState(true);
   const [messages, setMessages] = useState([]);
+  const [chatHistory, setChatHistory] = useState([]);
   
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showSidebar, setShowSidebar] = useState(true);
+  const [showHistory, setShowHistory] = useState(true);
   const [newChat, setNewChat] = useState(false);
-  const [chatHistory, setChatHistory] = useState([]);
-  const [showHistory, setShowHistory] = useState(false); // State to toggle chat history panel
   const messagesEndRef = useRef(null);
 
   // Fetch chat history when component mounts or user changes
@@ -977,32 +1064,6 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
       navigate('/login');
       return;
     }
-    
-    // Load chat history from localStorage first
-    const loadChatFromLocalStorage = () => {
-      try {
-        const userKey = currentUser?.id || 'guest';
-        const messagesKey = `chatMessages_${userKey}`;
-        const historyKey = `chatHistory_${userKey}`;
-        
-        const savedMessages = localStorage.getItem(messagesKey);
-        const savedHistory = localStorage.getItem(historyKey);
-        
-        if (savedMessages) {
-          setMessages(JSON.parse(savedMessages));
-          setShowWelcome(false);
-        }
-        
-        if (savedHistory) {
-          setChatHistory(JSON.parse(savedHistory));
-        }
-      } catch (error) {
-        // If there's an error loading from localStorage, continue with empty state
-      }
-    };
-    
-    // Load from localStorage first
-    loadChatFromLocalStorage();
     
     // Check onboarding status from the backend API
     const checkOnboardingStatus = async () => {
@@ -1042,7 +1103,6 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
   // Handle onboarding completion
   const handleOnboardingComplete = () => {
     setShowOnboarding(false);
-    fetchChatHistory();
   };
 
   // Function to fetch chat history from the backend for the current user
@@ -1050,6 +1110,13 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
     if (!isAuthenticated) return;
     
     try {
+      // Ensure token is available before making API call
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.error('No authentication token found in fetchChatHistory');
+        throw new Error('Authentication required. No token provided');
+      }
+      
       setLoading(true);
       
       // Get user-specific chat history using the user ID
@@ -1058,7 +1125,10 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
         // First try to get user-specific history if we have a user ID
         if (currentUser?.id) {
           // Use the backend API to get user-specific chat history
-          response = await apiService.chatbot.getUserHistory(currentUser.id);
+          // The interceptor in api.js will automatically add the token to the request headers
+          // Make sure we're passing the userId without any colon prefix
+          const userId = currentUser.id.toString().replace(/^:/, '');
+          response = await apiService.chatbot.getHistory(userId);
         } else {
           // Fallback to general history if no user ID
           response = await apiService.chatbot.getHistory();
@@ -1073,12 +1143,23 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
         
         // If we have local storage data, use it instead
         if (localMessages && localHistory) {
-          setMessages(JSON.parse(localMessages));
-          setChatHistory(JSON.parse(localHistory));
-          setLoading(false);
-          return;
+          try {
+            const parsedMessages = JSON.parse(localMessages);
+            const parsedHistory = JSON.parse(localHistory);
+            
+            if (parsedMessages && parsedMessages.length > 0) {
+              setMessages(parsedMessages);
+              setChatHistory(parsedHistory);
+              setLoading(false);
+              return;
+            }
+          } catch (parseError) {
+            console.error('Error parsing local storage data:', parseError);
+            // Continue with API data if local storage parsing fails
+          }
         }
       } catch (apiError) {
+        console.error('API error fetching chat history:', apiError);
         // Create a fallback response with empty data array
         response = { data: [] };
       }
@@ -1182,20 +1263,18 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
           setMessages(formattedMessages);
         }
       } else {
-        // If no chat history found, set default welcome message
-      // No chat history found, using welcome message
-      // setMessages([welcomeMessage]);
-      setShowWelcome(true); // Show welcome message for new chat
-      // localStorage.setItem(messagesKey, JSON.stringify([welcomeMessage]));
-      
-      // Create a default chat history entry
-      // const defaultChat = {
-      //   id: 1,
-      //   title: 'New Financial Chat',
-      //   date: new Date().toLocaleDateString(),
-      //   messages: [welcomeMessage],
-      //   userId: currentUser?.id || 'guest'
-      // };
+        // If no chat history found, show welcome message
+        setShowWelcome(true);
+        setMessages([]);
+        
+        // Create a default chat history entry
+        const defaultChat = {
+          id: 1,
+          title: 'New Financial Chat',
+          date: new Date().toLocaleDateString(),
+          messages: [],
+          userId: currentUser?.id || 'guest'
+        };
         
         setChatHistory([defaultChat]);
         localStorage.setItem(historyKey, JSON.stringify([defaultChat]));
@@ -1207,19 +1286,19 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
       const messagesKey = `chatMessages_${userKey}`;
       const historyKey = `chatHistory_${userKey}`;
       
-      // setMessages([welcomeMessage]);
-      // localStorage.setItem(messagesKey, JSON.stringify([welcomeMessage]));
-      
-      // const defaultChat = {
-      //   id: 1,
-      //   title: 'New Financial Chat',
-      //   date: new Date().toLocaleDateString(),
-      //   messages: [welcomeMessage],
-      //   userId: currentUser?.id || 'guest'
-      // };
+      // Create a default chat history entry
+      const defaultChat = {
+        id: 1,
+        title: 'New Financial Chat',
+        date: new Date().toLocaleDateString(),
+        messages: [],
+        userId: currentUser?.id || 'guest'
+      };
       
       setChatHistory([defaultChat]);
       localStorage.setItem(historyKey, JSON.stringify([defaultChat]));
+      setMessages([]);
+      setShowWelcome(true); // Show welcome message for new chat
     } finally {
       setLoading(false);
     }
@@ -1236,8 +1315,8 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
     console.log('Loading chat from history:', chat);
     
     if (chat && chat.messages && Array.isArray(chat.messages)) {
-      // Verify this chat belongs to the current user
-      if (chat.userId && chat.userId !== currentUser?.id) {
+      // Verify this chat belongs to the current user or is a guest chat
+      if (chat.userId && currentUser?.id && chat.userId !== currentUser.id) {
         toast.error('You do not have permission to access this chat');
         return;
       }
@@ -1251,6 +1330,11 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
           userId: msg.userId || currentUser?.id || 'guest',
           timestamp: msg.timestamp || new Date().toISOString()
         }));
+        
+        // Validate that we have valid messages
+        if (!formattedMessages || !Array.isArray(formattedMessages)) {
+          throw new Error('Invalid message format in chat history');
+        }
         
         console.log('Formatted messages for display:', formattedMessages.length);
         
@@ -1267,7 +1351,7 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
           
           setInput('');
           setError(null);
-          toast.success(`चैट लोड की गई: ${chat.title}`);
+          toast.success(`Chat loaded: ${chat.title}`);
           
           // Close sidebar on mobile after loading chat
           if (isMobile) {
@@ -1282,15 +1366,15 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
         toast.error('Problem loading chat history');
         
         // Set default welcome message as fallback
-      // setMessages([welcomeMessage]);
-      // setShowWelcome(true); // Show welcome message for new chat
-      
-      // Get user-specific key for localStorage
-      const userKey = currentUser?.id || 'guest';
-      const messagesKey = `chatMessages_${userKey}`;
-      
-      // Save default message to localStorage
-      // localStorage.setItem(messagesKey, JSON.stringify([welcomeMessage]));
+        setShowWelcome(true); // Show welcome message for new chat
+        
+        // Get user-specific key for localStorage
+        const userKey = currentUser?.id || 'guest';
+        const messagesKey = `chatMessages_${userKey}`;
+        
+        // Clear messages to show welcome screen
+        setMessages([]);
+        localStorage.setItem(messagesKey, JSON.stringify([]));
       }
     } else {
       console.error('Invalid chat object:', chat);
@@ -1319,7 +1403,7 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
       // If user is authenticated, delete from server too
       if (currentUser?.id) {
         try {
-          await apiService.chatbot.deleteChat(chatId);
+          await apiService.chatbot.deleteSession(chatId);
           toast.success('Chat successfully deleted');
         } catch (apiError) {
           console.error('Error deleting chat from server:', apiError);
@@ -1361,8 +1445,6 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
           // localStorage.setItem(messagesKey, JSON.stringify([welcomeMessage]));
         }
       }
-      
-      toast.success('Chat successfully deleted');
     } catch (error) {
       console.error('Error in deleteChat function:', error);
       toast.error('Failed to delete chat. Please try again.');
@@ -1383,42 +1465,48 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
       setLoading(true);
       // Clearing all chat history
       
-      // If user is authenticated, clear history from server too
+      // If user is authenticated, clear from server too
       if (currentUser?.id) {
         try {
-          await apiService.chatbot.clearAllHistory();
-          // Chat history cleared from server successfully
+          await apiService.chatbot.clearAllChats(currentUser.id);
+          toast.success('Chat history successfully cleared from server');
         } catch (apiError) {
           console.error('Error clearing chat history from server:', apiError);
-          // Continue with local clearing even if server clearing fails
+          toast.error('Problem clearing chat history from server');
+          // Continue with local deletion even if server deletion fails
         }
       }
       
-      // Reset to just the welcome message
-      // setMessages([welcomeMessage]);
-      setChatHistory([]);
+      // Reset messages and show welcome message
+      setMessages([]);
+      setShowWelcome(true);
       
       // Get user-specific key for localStorage
       const userKey = currentUser?.id || 'guest';
       const messagesKey = `chatMessages_${userKey}`;
       const historyKey = `chatHistory_${userKey}`;
       
-      // Update localStorage with user-specific key
-      // localStorage.setItem(messagesKey, JSON.stringify([welcomeMessage]));
+      // Update localStorage with empty messages array
+      localStorage.setItem(messagesKey, JSON.stringify([]));
       localStorage.setItem(historyKey, JSON.stringify([]));
       
       // Create a default chat entry after clearing
-      // const defaultChat = {
-      //   id: 1,
-      //   title: 'New Financial Chat',
-      //   date: new Date().toLocaleDateString(),
-      //   messages: [welcomeMessage],
-      //   userId: currentUser?.id || 'guest'
-      // };
+      const defaultChat = {
+        id: 1,
+        title: 'New Financial Chat',
+        date: new Date().toLocaleDateString(),
+        messages: [],
+        userId: currentUser?.id || 'guest'
+      };
       
       // Update state and localStorage with the default chat
       setChatHistory([defaultChat]);
       localStorage.setItem(historyKey, JSON.stringify([defaultChat]));
+      
+      // Show success message if not already shown
+      if (!currentUser?.id) {
+        toast.success('Chat history successfully cleared');
+      }
       
       setInput('');
       setError(null);
@@ -1447,17 +1535,17 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
     
     // Starting a new chat
     
-    // Reset to welcome message
-    // setMessages([welcomeMessage]);
-    // setShowWelcome(true); // Show welcome message for new chat
+    // Reset messages and show welcome message
+    setMessages([]);
+    setShowWelcome(true); // Show welcome message for new chat
     
     // Get user-specific keys for localStorage
     const userKey = currentUser?.id || 'guest';
     const messagesKey = `chatMessages_${userKey}`;
     const historyKey = `chatHistory_${userKey}`;
     
-    // Update localStorage with user-specific key
-    // localStorage.setItem(messagesKey, JSON.stringify([welcomeMessage]));
+    // Update localStorage with empty messages array
+    localStorage.setItem(messagesKey, JSON.stringify([]));
     
     // Reset input and error state
     setInput('');
@@ -1469,25 +1557,30 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
       Math.max(...chatHistory.map(chat => chat.id)) + 1 : 1;
     
     // Add new chat to history with user ID
-    // const newChatEntry = {
-    //   id: newChatId,
-    //   title: 'नई वित्तीय चैट',
-    //   date: new Date().toLocaleDateString(),
-    //   messages: [welcomeMessage],
-    //   userId: currentUser?.id || 'guest' // Add user ID to new chat
-    // };
+    const newChatEntry = {
+      id: newChatId,
+      title: 'New Financial Chat',
+      date: new Date().toLocaleDateString(),
+      messages: [],
+      userId: currentUser?.id || 'guest' // Add user ID to new chat
+    };
     
     // Show success message
     toast.success('New chat successfully started');
     
     // Add new chat to the beginning of the history array
     const updatedHistory = [newChatEntry, ...chatHistory];
-    // Updated chat history with new chat
     
+    // Update chat history with new chat
     setChatHistory(updatedHistory);
     
-    // Update localStorage with user-specific key
+    // Save updated history to localStorage
     localStorage.setItem(historyKey, JSON.stringify(updatedHistory));
+    
+    // Close sidebar on mobile after starting new chat
+    if (isMobile) {
+      setShowSidebar(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -1723,7 +1816,7 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
               <p>Loading chat history...</p>
               <div className="loader mt-2 mx-auto"></div>
             </div>
-          ) : chatHistory.length === 0 ? (
+          ) : chatHistory && chatHistory.length === 0 ? (
             <div className="text-center p-3 text-sm text-gray-800 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm">
               <p>No chat history found</p>
               <button 
@@ -1736,8 +1829,8 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
           ) : (
             <div className="space-y-1">
               {/* Filter chats to only show current user's chats */}
-              {chatHistory
-                .filter(chat => !chat.userId || chat.userId === currentUser?.id)
+              {chatHistory && Array.isArray(chatHistory) && chatHistory
+                .filter(chat => !chat.userId || chat.userId === (currentUser?.id || 'guest'))
                 .map(chat => (
                 <div key={chat.id} className="relative group">
                   <button 
@@ -1765,7 +1858,6 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
                   </button>
                 </div>
               ))}
-          {/* Removed divider lines after questions */}
             </div>
           )}
         </div>

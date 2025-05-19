@@ -15,6 +15,12 @@ api.interceptors.request.use(
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      // Ensure headers object exists
+      config.headers = config.headers || {};
+      // Set content type if not already set
+      if (!config.headers['Content-Type']) {
+        config.headers['Content-Type'] = 'application/json';
+      }
     }
     return config;
   },
@@ -67,18 +73,17 @@ const apiService = {
   // Chatbot endpoints
 chatbot: {
   sendMessage: (message) => api.post('/chatbot/query', { query: message }),
-  getHistory: () => api.get('/chatbot/history'),
-  getUserHistory: (userId) => {
-    try {
-      return api.get(`/chatbot/session/${userId}`);
-    } catch (error) {
-      console.error('Error fetching user history:', error);
-      // Fallback to general history if user-specific endpoint fails
-      return api.get('/chatbot/history');
-    }
+  getHistory: (userId) => {
+    // Ensure token is included in the request by using the interceptor
+    // The interceptor automatically adds the Authorization header with the token
+    return userId ? 
+      api.get(`/chatbot/user/${userId}/history`) :
+      api.get('/chatbot/history');
   },
-  deleteChat: (chatId) => api.delete(`/chatbot/chat/${chatId}`),
-  clearAllHistory: () => api.delete('/chatbot/history'),
+  getChatSession: (sessionId) => api.get(`/chatbot/session/${sessionId}`),
+  deleteSession: (sessionId) => api.delete(`/chatbot/session/${sessionId}`),
+  clearAllChats: () => api.delete('/chatbot/history'),
+  submitFeedback: (sessionId, feedbackData) => api.post(`/chatbot/feedback/${sessionId}`, feedbackData),
   },
 };
 
