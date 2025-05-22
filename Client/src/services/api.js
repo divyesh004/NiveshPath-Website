@@ -73,18 +73,22 @@ const apiService = {
   // Chatbot endpoints
 chatbot: {
   sendMessage: (message) => api.post('/chatbot/query', { query: message }),
-  getHistory: (userId) => {
-    // Ensure token is included in the request by using the interceptor
-    // The interceptor automatically adds the Authorization header with the token
-    return userId ? 
-      api.get(`/chatbot/user/${userId}/history`) :
-      api.get('/chatbot/history');
+  getHistory: () => api.get('/chatbot/history'),
+  // Ensure userId is properly formatted and validated before using in URL
+  getChatHistory: (userId) => {
+    // Ensure userId is a string and remove any colon prefix if present
+    const formattedUserId = userId?.toString().replace(/^:/, '');
+    if (!formattedUserId) {
+      console.error('Invalid userId provided to getChatHistory');
+      return api.get('/chatbot/history'); // Fallback to general history
+    }
+    return api.get(`/chatbot/user/${formattedUserId}/history`);
   },
   getChatSession: (sessionId) => api.get(`/chatbot/session/${sessionId}`),
   deleteSession: (sessionId) => api.delete(`/chatbot/session/${sessionId}`),
   clearAllChats: () => api.delete('/chatbot/history'),
   submitFeedback: (sessionId, feedbackData) => api.post(`/chatbot/feedback/${sessionId}`, feedbackData),
-  },
+},
 };
 
 export default apiService;

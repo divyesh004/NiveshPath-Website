@@ -4,6 +4,7 @@ import apiService from '../services/api';
 import { useAuth } from '../contexts/AuthContext'; // Import Auth Context
 import Onboarding from './Onboarding'; // Import Onboarding component
 import DOMPurify from 'dompurify'; // For sanitizing HTML
+import {  toast } from 'react-toastify';
 
 const formatBotMessage = (text) => {
   if (!text) return '';
@@ -1128,7 +1129,9 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
           // The interceptor in api.js will automatically add the token to the request headers
           // Make sure we're passing the userId without any colon prefix
           const userId = currentUser.id.toString().replace(/^:/, '');
-          response = await apiService.chatbot.getHistory(userId);
+          // Use getChatHistory instead of getHistory to properly pass userId
+          response = await apiService.chatbot.getChatHistory(userId);
+          console.log('Fetched chat history for user:', userId, response.data);
         } else {
           // Fallback to general history if no user ID
           response = await apiService.chatbot.getHistory();
@@ -1605,75 +1608,70 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
     setError(null);
 
     // Add user message
-      const userMessage = { id: messages.length + 1, text: input, isBot: false };
-      const updatedMessages = [...messages, userMessage];
-      setMessages(updatedMessages);
-      
-      // Get user-specific key for localStorage
+    const userMessage = { id: Date.now(), text: input, isBot: false };
+    setMessages(prevMessages => {
+      const updated = [...prevMessages, userMessage];
       const userKey = currentUser?.id || 'guest';
       const messagesKey = `chatMessages_${userKey}`;
-      
-      // Save to localStorage with user-specific key
-      localStorage.setItem(messagesKey, JSON.stringify(updatedMessages));
-      
-      setInput('');
-      setIsTyping(true);
+      localStorage.setItem(messagesKey, JSON.stringify(updated));
+      return updated;
+    });
+    
+    setInput(''); // Clear input after sending
+    setIsTyping(true);
     
     try {
       // Send message to backend API
-      const response = await apiService.chatbot.sendMessage(input.trim());
+      // Use the input from the userMessage, as 'input' state is cleared
+      const currentInput = userMessage.text;
+      const response = await apiService.chatbot.sendMessage(currentInput.trim());
       
       // Process the response from the API
       if (response.data && response.data.response) {
         const botMessage = { 
-          id: messages.length + 2, 
+          id: Date.now() + 1, // Ensure unique ID
           text: response.data.response, 
           isBot: true 
         };
-        const updatedMessages = [...messages, botMessage];
-        setMessages(updatedMessages);
+        
+        setMessages(prevMessages => {
+          const updated = [...prevMessages, botMessage];
+          const userKey = currentUser?.id || 'guest';
+          const messagesKey = `chatMessages_${userKey}`;
+          localStorage.setItem(messagesKey, JSON.stringify(updated));
+
+          // Update chat history using the 'updated' messages array
+          setChatHistory(prevChatHistory => {
+            const historyKey = `chatHistory_${currentUser?.id || 'guest'}`;
+            let newHistoryState = [...prevChatHistory];
+            let wasNewChatProcessed = false;
+
+            if (newHistoryState.length > 0) {
+              const currentChat = { ...newHistoryState[0] }; // Work on a copy
+              currentChat.messages = updated; // 'updated' is the full list [UserQuery, BotResponse]
+
+              if (newChat) { // 'newChat' is from the outer scope of handleSubmit
+                currentChat.title = userMessage.text.length > 20 ? userMessage.text.substring(0, 20) + '...' : userMessage.text;
+                wasNewChatProcessed = true; // Mark that we handled the newChat logic
+              }
+              newHistoryState[0] = currentChat;
+            }
+            // If newHistoryState was empty, it remains empty. This assumes startNewChat correctly initializes history.
+            
+            localStorage.setItem(historyKey, JSON.stringify(newHistoryState));
+            
+            if (wasNewChatProcessed) {
+              setNewChat(false); // Update newChat state here, based on processing within this update
+            }
+            return newHistoryState;
+          });
+          return updated;
+        });
         
         // Scroll to the user's question after response is received
         setTimeout(() => {
           scrollToLatestQuestion();
         }, 300);
-        
-        // Get user-specific key for localStorage
-        const userKey = currentUser?.id || 'guest';
-        const messagesKey = `chatMessages_${userKey}`;
-        const historyKey = `chatHistory_${userKey}`;
-        
-        // Save messages to localStorage with user-specific key
-        localStorage.setItem(messagesKey, JSON.stringify(updatedMessages));
-        
-        // Update chat title if this is a new chat
-        if (newChat && chatHistory.length > 0) {
-          const updatedHistory = [...chatHistory];
-          updatedHistory[0].title = input.length > 20 ? input.substring(0, 20) + '...' : input;
-          updatedHistory[0].messages = [...updatedHistory[0].messages, userMessage, botMessage];
-          setChatHistory(updatedHistory);
-          
-          // Get user-specific key for localStorage
-          const userKey = currentUser?.id || 'guest';
-          const historyKey = `chatHistory_${userKey}`;
-          
-          // Save updated history to localStorage with user-specific key
-          localStorage.setItem(historyKey, JSON.stringify(updatedHistory));
-          
-          setNewChat(false);
-        } else if (chatHistory.length > 0) {
-          // Update existing chat with new messages
-          const updatedHistory = [...chatHistory];
-          updatedHistory[0].messages = updatedMessages;
-          setChatHistory(updatedHistory);
-          
-          // Get user-specific key for localStorage
-          const userKey = currentUser?.id || 'guest';
-          const historyKey = `chatHistory_${userKey}`;
-          
-          // Save updated history to localStorage with user-specific key
-          localStorage.setItem(historyKey, JSON.stringify(updatedHistory));
-        }
       } else {
         // Fallback in case the API response format is unexpected
         throw new Error('Unexpected response format from server');
@@ -1685,16 +1683,21 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
       
       // Add a fallback bot message
       const errorMessage = { 
-        id: messages.length + 2, 
+        id: Date.now() + 1, // Ensure unique ID
         text: 'Sorry, I encountered an error processing your request. Please try again later.', 
         isBot: true 
       };
-      const updatedMessages = [...messages, errorMessage];
-      setMessages(updatedMessages);
+      setMessages(prevMessages => {
+        const updated = [...prevMessages, errorMessage];
+        const userKey = currentUser?.id || 'guest';
+        const messagesKey = `chatMessages_${userKey}`;
+        localStorage.setItem(messagesKey, JSON.stringify(updated));
+        return updated;
+      });
       
-      // Get user-specific key for localStorage
-      const userKey = currentUser?.id || 'guest';
-      const messagesKey = `chatMessages_${userKey}`;
+      // Get user-specific key for localStorage (already handled inside setMessages)
+      // const userKey = currentUser?.id || 'guest';
+      // const messagesKey = `chatMessages_${userKey}`;
       
       // Save to localStorage with user-specific key
       localStorage.setItem(messagesKey, JSON.stringify(updatedMessages));
@@ -1989,10 +1992,6 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
         
         {/* Messages Container - Enhanced modern style */}
         <div className="flex-1 overflow-y-auto bg-white dark:bg-gray-900 pb-20 sm:pb-24 relative">
-          {/* Welcome message at the start of a new chat */}
-          {/* {showWelcome && messages.length <= 1 && (
-            <WelcomeMessage onDismiss={() => setShowWelcome(false)} />
-          )} */}
           
           {/* Down arrow button to scroll to latest answer - Enhanced with animation */}
           {messages.length > 1 && (
