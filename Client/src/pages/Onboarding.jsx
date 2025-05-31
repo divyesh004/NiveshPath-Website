@@ -25,7 +25,7 @@ const Onboarding = (props) => {
         const onboardingStatus = localStorage.getItem('onboardingCompleted');
         if (onboardingStatus === 'true') {
           // User has already completed onboarding, redirect to dashboard
-          toast.info('You have already completed onboarding');
+          toast.info('You have already completed onboarding', { toastId: 'onboarding-already-completed-local' });
           navigate('/dashboard');
           return;
         }
@@ -35,7 +35,7 @@ const Onboarding = (props) => {
           const response = await apiService.onboarding.getOnboardingStatus();
           if (response.data && response.data.completed) {
             // User has already completed onboarding, redirect to dashboard
-            toast.info('You have already completed onboarding');
+            toast.info('You have already completed onboarding', { toastId: 'onboarding-already-completed-api' });
             navigate('/dashboard');
           }
         } catch (apiError) {
@@ -354,7 +354,7 @@ const Onboarding = (props) => {
       if (!formData.name || !formData.age || !formData.monthlyIncome) {
         // Play error sound
       playNotificationSound('error');
-        toast.error('Please fill all required fields');
+        toast.error('Please fill all required fields', { toastId: 'onboarding-fields-required' });
         setCharacterMessage('Oops! Please fill in all the required fields before we continue.');
         setShowAnimation(false);
         setTimeout(() => setShowAnimation(true), 50);
@@ -403,7 +403,7 @@ const Onboarding = (props) => {
       // Additional check to ensure investment types are properly set when user has existing investments
       if (formData.hasExistingInvestments && (!Array.isArray(profileData.existingInvestments) || profileData.existingInvestments.length === 0)) {
         // If user checked they have investments but didn't select any types, show an error
-        toast.warning('You indicated that you have investments, please select investment types');
+        toast.warning('You indicated that you have investments, please select investment types', { toastId: 'onboarding-no-investment-types' });
         setLoading(false);
         return;
       }
@@ -426,7 +426,7 @@ const Onboarding = (props) => {
       
       // Navigate after a short delay to show the success screen
       setTimeout(() => {
-        toast.success('Profile created successfully!');
+        toast.success('Profile created successfully!', { toastId: 'onboarding-profile-created' });
         // If coming from chatbot, redirect back to chatbot
         if (props.fromChatbot) {
           if (props.onComplete) {
@@ -440,7 +440,7 @@ const Onboarding = (props) => {
       }, 3000);
       
     } catch (error) {
-      toast.error('Failed to save your preferences. Please try again.');
+      toast.error('Failed to save your preferences. Please try again.', { toastId: 'onboarding-save-failed' });
     } finally {
       setLoading(false);
     }
@@ -457,7 +457,6 @@ const Onboarding = (props) => {
       case 0: // Welcome Screen
         return (
           <div className="bg-gradient-to-r from-indigo-500/10 to-purple-500/10 min-h-[350px] flex flex-col justify-center items-center text-center p-8 rounded-2xl shadow-lg border border-indigo-100 dark:border-indigo-900">
-            <img src="/images/finance-journey.svg" alt="Finance Journey" className="w-32 h-32 mb-6 drop-shadow-lg animate-float" />
             <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">Welcome to Your Finance Journey 🚀</h1>
             <p className="text-gray-600 dark:text-gray-300 mt-4 text-lg max-w-2xl">We'll guide you step-by-step to better understand your finances and create a personalized investment strategy.</p>
             <button 
@@ -829,7 +828,7 @@ const Onboarding = (props) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-indigo-950 py-8 px-4 sm:py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-indigo-950 py-4 px-3 sm:py-8 sm:px-6 lg:px-8 overflow-x-hidden pt-12 sm:pt-16 md:pt-20">
       {confetti && (
         <div className="confetti-container">
           {[...Array(50)].map((_, i) => (
@@ -846,69 +845,69 @@ const Onboarding = (props) => {
         </div>
       )}
       
-      <div className="max-w-6xl mx-auto">
-        {/* Character mascot */}
-        <div className="character-container">
-          <div className={`character ${character} ${showAnimation ? 'character-bounce' : ''}`}>
-            <div className="character-speech-bubble">
+      <div className="max-w-5xl mx-auto bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 sm:p-6 md:p-8 border border-gray-100 dark:border-gray-700">
+        {/* Character mascot - Improved positioning and responsiveness */}
+        <div className="character-container mb-2 sm:mb-4">
+          <div className={`character ${character} ${showAnimation ? 'character-bounce' : ''} shadow-lg`}>
+            <div className="character-speech-bubble shadow-md dark:bg-gray-700 dark:border-gray-600">
               <span className={typingEffect ? 'typing-effect' : ''}>{characterMessage}</span>
             </div>
           </div>
         </div>
         
         {currentStep > 0 && currentStep < 5 && (
-          <div>
-            <h2 className="mt-4 sm:mt-6 text-center text-2xl sm:text-3xl font-extrabold text-primary-pro dark:text-white">
+          <div className="mb-6">
+            <h2 className="text-center text-xl sm:text-2xl md:text-3xl font-extrabold text-primary-pro dark:text-white">
               {currentStep === 1 ? 'Tell us about yourself' : 
                currentStep === 2 ? 'Your Financial Goals' :
                currentStep === 3 ? 'Investment Experience' :
                'Your Financial Personality'}
             </h2>
-            <p className="mt-2 text-center text-xs sm:text-sm text-text-pro dark:text-gray-400">
+            <p className="mt-2 text-center text-xs sm:text-sm text-text-pro dark:text-gray-400 max-w-2xl mx-auto">
               {currentStep === 1 ? 'This helps us personalize your investment experience' : 
                currentStep === 2 ? 'What are you saving for?' :
                currentStep === 3 ? 'No worries if you\'re just starting out' :
                'Understanding how you think about money'}
             </p>
             
-            {/* Progress dots - Duolingo style */}
+            {/* Progress dots - Improved spacing and visibility */}
             <div className="flex gap-2 justify-center mt-4">
               {[1, 2, 3, 4].map(step => (
                 <span 
                   key={step}
-                  className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                  className={`w-3 h-3 sm:w-4 sm:h-4 rounded-full transition-all duration-300 ${
                     currentStep === step 
-                      ? 'bg-secondary-pro scale-125' 
+                      ? 'bg-secondary-pro scale-125 shadow-sm' 
                       : currentStep > step 
                         ? 'bg-secondary-pro' 
-                        : 'bg-background-pro border border-secondary-pro'
+                        : 'bg-background-pro border-2 border-secondary-pro'
                   }`}
                 />
               ))}
             </div>
             
-            {/* Progress bar */}
-            <div className="mt-3 h-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+            {/* Progress bar - Improved height and animation */}
+            <div className="mt-3 h-2 sm:h-3 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden shadow-inner">
               <div 
-                className="h-2 bg-secondary-pro rounded-full transition-all duration-500 ease-out" 
+                className="h-full bg-secondary-pro rounded-full transition-all duration-500 ease-out" 
                 style={{ width: `${progress}%` }}
               ></div>
             </div>
           </div>
         )}
         
-        <form onSubmit={handleSubmit} className="mt-6 sm:mt-8 space-y-4 sm:space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
           <div className={`form-step-container ${showAnimation ? 'form-fade' : ''}`}>
             {currentStep === 5 ? renderSuccessScreen() : renderStep()}
           </div>
           
           {currentStep > 0 && currentStep < 5 && (
-            <div className="flex justify-between mt-6 sm:mt-8">
-              {currentStep > 1 && (
+            <div className="flex justify-between items-center mt-6 sm:mt-8 flex-wrap gap-3">
+              {currentStep > 1 ? (
                 <button
                   type="button"
                   onClick={prevStep}
-                  className="bg-background-pro border border-secondary-pro hover:bg-gray-100 text-secondary-pro px-4 py-2 rounded-lg flex items-center gap-2 transition-all"
+                  className="bg-white dark:bg-gray-700 border-2 border-secondary-pro hover:bg-gray-50 dark:hover:bg-gray-600 text-secondary-pro px-4 py-2 rounded-lg flex items-center gap-2 transition-all shadow-sm hover:shadow focus:outline-none focus:ring-2 focus:ring-secondary-pro focus:ring-opacity-50"
                   disabled={loading}
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -916,13 +915,15 @@ const Onboarding = (props) => {
                   </svg>
                   Back
                 </button>
+              ) : (
+                <div></div>
               )}
               
               {currentStep < 4 ? (
                 <button
                   type="button"
                   onClick={nextStep}
-                  className="bg-secondary-pro hover:bg-accent-pro text-white px-6 py-3 rounded-lg transition-all ml-auto flex items-center gap-2 group"
+                  className="bg-secondary-pro hover:bg-accent-pro text-white px-6 py-3 rounded-lg transition-all ml-auto flex items-center gap-2 group shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-secondary-pro focus:ring-opacity-50"
                   disabled={loading}
                 >
                   Next
@@ -933,13 +934,25 @@ const Onboarding = (props) => {
               ) : (
                 <button
                   type="submit"
-                  className="bg-secondary-pro hover:bg-accent-pro text-white px-6 py-3 rounded-lg transition-all ml-auto flex items-center gap-2 group"
+                  className="bg-secondary-pro hover:bg-accent-pro text-white px-6 py-3 rounded-lg transition-all ml-auto flex items-center gap-2 group shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-secondary-pro focus:ring-opacity-50"
                   disabled={loading}
                 >
-                  {loading ? 'Saving...' : 'Submit'}
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
+                  {loading ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      Submit
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </>
+                  )}
                 </button>
               )}
             </div>

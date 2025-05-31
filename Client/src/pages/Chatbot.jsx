@@ -1042,6 +1042,102 @@ const formatBotMessage = (text) => {
 // };
 
 const Chatbot = ({ darkMode, setDarkMode }) => {
+  const [sessionId, setSessionId] = useState(null); // Ensure sessionId state is here
+
+  // Function to load a chat from history (now inside Chatbot component)
+  const loadChatFromHistory = async (chat) => {
+    // Ensure chat object and chat.id are present before trying to load
+    if (!chat || !chat.id) {
+      toast.error('Invalid chat data. Cannot load.');
+      setMessages([]);
+      setShowWelcome(true);
+      setSessionId(null);
+      return;
+    }
+
+    try {
+      // Use chat.messages if available, otherwise default to an empty array.
+      // This ensures messagesToLoad is always an array.
+      const messagesToLoad = (chat.messages && Array.isArray(chat.messages)) ? chat.messages : [];
+
+      // Format messages for display using messagesToLoad
+      const formattedMessages = messagesToLoad.map((msg, index) => {
+        // Basic validation for message structure
+        if (!msg || typeof msg.sender === 'undefined' || typeof msg.content === 'undefined') {
+          console.warn('Message missing sender or content in chat history:', msg);
+          return null;
+        }
+        // More robust check for content
+        if (typeof msg.content !== 'string' && typeof msg.text !== 'string') {
+          console.warn('Message missing content in chat history:', msg);
+          return null;
+        }
+        
+        return {
+          id: `${chat.id}-${msg.sender}-${index}`,
+          text: msg.content || msg.text || '',
+          sender: msg.sender || (msg.isBot ? 'bot' : 'user'),
+          isBot: msg.sender === 'bot' || msg.isBot || false,
+          userId: msg.userId || currentUser?.id || 'guest',
+          timestamp: msg.timestamp || new Date().toISOString()
+        };
+      }).filter(msg => msg !== null); // Remove any null messages
+      
+      // Validate that formattedMessages is an array (it should be, due to map and filter)
+      if (!Array.isArray(formattedMessages)) {
+        // This is a safeguard, should not typically be hit.
+        console.error('Formatted messages are not an array after processing.');
+        toast.error('Error processing chat messages.');
+        setMessages([]);
+        setSessionId(chat.id); // Load the session even if messages fail to format
+        setShowWelcome(false); // Show empty chat interface
+        return;
+      }
+
+      // Inform user if the original chat had messages but none were valid for display
+      if (messagesToLoad.length > 0 && formattedMessages.length === 0) {
+        toast.warn('Some messages in this chat could not be displayed.');
+      } else if (messagesToLoad.length === 0 && formattedMessages.length === 0) {
+        // This means the chat history item had no messages to begin with.
+        // toast.info('This chat session is empty.'); // Displaying an empty chat is often better than a toast here.
+      }
+            
+      // Set messages (even if empty, to clear previous chat) and session details
+      if (formattedMessages.length > 0) {
+        const sortedMessages = formattedMessages.sort((a, b) => 
+          new Date(a.timestamp) - new Date(b.timestamp)
+        );
+        setMessages(sortedMessages);
+        toast.success(`Chat loaded: ${chat.title || 'Chat'}`);
+      } else {
+        setMessages([]); // Set to empty array if no valid formatted messages
+        // No toast here for empty chat, just show the empty chat interface
+      }
+      
+      setSessionId(chat.id);
+      setShowWelcome(false);
+      setInput('');
+      setError(null);
+      
+      if (isMobile) {
+        setShowSidebar(false);
+      }
+    } catch (error) {
+      console.error('Error loading or formatting chat messages:', error);
+      // Check if the error is the one we specifically want to handle differently
+      if (error.message === 'No messages found in selected chat') {
+          toast.info('No messages found in the selected chat.');
+      } else {
+          toast.error('Problem loading chat history.');
+      }
+      
+      // Set default welcome message as fallback
+      setShowWelcome(true); // Show welcome message for new chat
+      setMessages([]);
+      setSessionId(null); // Reset session ID as well
+      }
+  };
+  
   const { currentUser, isAuthenticated, onboardingCompleted } = useAuth(); // Get user info and onboarding status
   const navigate = useNavigate();
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -1057,6 +1153,34 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
   const [showHistory, setShowHistory] = useState(true);
   const [newChat, setNewChat] = useState(false);
   const messagesEndRef = useRef(null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768); // isMobile state is fine here
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    // Load messages from localStorage on component mount
+    const userKey = currentUser?.id || 'guest';
+    const messagesKey = `chatMessages_${userKey}`;
+    const storedMessages = localStorage.getItem(messagesKey);
+    if (storedMessages) {
+      try {
+        const parsedMessages = JSON.parse(storedMessages);
+        if (Array.isArray(parsedMessages) && parsedMessages.length > 0) {
+          setMessages(parsedMessages);
+          setShowWelcome(false); // Don't show welcome if there are messages
+        }
+      } catch (e) {
+        console.error('Error parsing stored chat messages:', e);
+        localStorage.removeItem(messagesKey); // Clear corrupted data
+      }
+    }
+  }, [currentUser]); // Re-run if user changes
 
   // Fetch chat history when component mounts or user changes
   useEffect(() => {
@@ -1109,345 +1233,239 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
   // Function to fetch chat history from the backend for the current user
   const fetchChatHistory = async () => {
     if (!isAuthenticated) return;
-    
+
+    setLoading(true);
+    setError(null);
+    const userKey = currentUser?.id || 'guest';
+    const historyKey = `chatHistory_${userKey}`;
+
+    // Try to load chat history from localStorage first
+    const storedHistory = localStorage.getItem(historyKey);
+    if (storedHistory) {
+      try {
+        const parsedHistory = JSON.parse(storedHistory);
+        if (Array.isArray(parsedHistory) && parsedHistory.length > 0) {
+          setChatHistory(parsedHistory);
+          // If messages are also empty (meaning no active chat was loaded from its own localStorage item)
+          // then we can hide the welcome screen because we have history.
+          if (messages.length === 0) { 
+            setShowWelcome(false);
+          }
+        }
+      } catch (e) {
+        console.error('Error parsing stored chat history:', e);
+        localStorage.removeItem(historyKey); // Clear corrupted data
+      }
+    }
+
+    let actualApiChatSessions = [];
+
     try {
-      // Ensure token is available before making API call
       const token = localStorage.getItem('token');
       if (!token) {
         console.error('No authentication token found in fetchChatHistory');
+        // setError('Authentication required. Please log in.'); // User-facing error
+        // toast.error('Authentication required. Please log in.');
+        // setLoading(false);
+        // return; 
         throw new Error('Authentication required. No token provided');
       }
-      
-      setLoading(true);
-      
-      // Get user-specific chat history using the user ID
+
+      const userId = currentUser?.id?.toString().replace(/^:/, '');
       let response;
-      try {
-        // First try to get user-specific history if we have a user ID
-        if (currentUser?.id) {
-          // Use the backend API to get user-specific chat history
-          // The interceptor in api.js will automatically add the token to the request headers
-          // Make sure we're passing the userId without any colon prefix
-          const userId = currentUser.id.toString().replace(/^:/, '');
-          // Use getChatHistory instead of getHistory to properly pass userId
-          response = await apiService.chatbot.getChatHistory(userId);
-          console.log('Fetched chat history for user:', userId, response.data);
-        } else {
-          // Fallback to general history if no user ID
-          response = await apiService.chatbot.getHistory();
-        }
-        
-        // Check if we have local storage history first
-        const userKey = currentUser?.id || 'guest';
-        const localMessagesKey = `chatMessages_${userKey}`;
-        const localHistoryKey = `chatHistory_${userKey}`;
-        const localMessages = localStorage.getItem(localMessagesKey);
-        const localHistory = localStorage.getItem(localHistoryKey);
-        
-        // If we have local storage data, use it instead
-        if (localMessages && localHistory) {
-          try {
-            const parsedMessages = JSON.parse(localMessages);
-            const parsedHistory = JSON.parse(localHistory);
-            
-            if (parsedMessages && parsedMessages.length > 0) {
-              setMessages(parsedMessages);
-              setChatHistory(parsedHistory);
-              setLoading(false);
-              return;
-            }
-          } catch (parseError) {
-            console.error('Error parsing local storage data:', parseError);
-            // Continue with API data if local storage parsing fails
-          }
-        }
-      } catch (apiError) {
-        console.error('API error fetching chat history:', apiError);
-        // Create a fallback response with empty data array
-        response = { data: [] };
+
+      if (userId) {
+                response = await apiService.chatbot.getChatHistory(userId);
+      } else {
+        // According to user, history should only be fetched if userId is present.
+        // If no userId, we should not attempt to fetch general history.
+                setMessages([]);
+        setChatHistory([]);
+        setShowWelcome(true);
+        setLoading(false);
+        return;
+        // console.log("Fetching general history as userId is not available. This might be empty or not supported by backend for guests.");
+        // response = await apiService.chatbot.getHistory(); // This line is now commented out based on new understanding
       }
+
       
-      // Get user-specific keys for localStorage
-      const userKey = currentUser?.id || 'guest';
-      const messagesKey = `chatMessages_${userKey}`;
-      const historyKey = `chatHistory_${userKey}`;
-      
-      // Ensure response.data is an array
-      const chatData = Array.isArray(response.data) ? response.data : [];
-      
-      // If we have history, process it
-      if (chatData.length > 0) {
-        // Format messages for display
-        const formattedMessages = chatData.map((msg, index) => ({
-          id: index + 1,
-          text: msg.content || msg.text || '',
-          isBot: msg.sender === 'bot' || msg.isBot || false,
-          userId: msg.userId || currentUser?.id || 'guest',
-          timestamp: msg.timestamp || new Date().toISOString()
-        }));
-        
-        setMessages(formattedMessages);
-        
-        // Save to localStorage with user-specific key
-        localStorage.setItem(messagesKey, JSON.stringify(formattedMessages));
-        
-        // Create chat history entries from unique conversations
-        const uniqueChats = [];
-        
-        // Extract user messages to use for chat titles
-        const userMessages = chatData.filter(msg => 
-          (msg.sender === 'user' || !msg.isBot) && 
-          (!msg.userId || msg.userId === currentUser?.id)
-        );
-        
-        if (userMessages.length > 0) {
-          // Use first user message as title for the first chat
-          const firstUserMsg = userMessages[0];
-          const firstChatTitle = firstUserMsg.content || firstUserMsg.text || 'New Chat';
-          const formattedFirstTitle = firstChatTitle.length > 20 ? 
-            firstChatTitle.substring(0, 20) + '...' : firstChatTitle;
-          
-          // Add first chat to history
-          uniqueChats.push({
-            id: 1,
-            title: formattedFirstTitle,
-            date: new Date().toLocaleDateString(),
-            messages: chatData,
-            userId: currentUser?.id || 'guest'
-          });
-          
-          // If there are multiple user messages with significant gap, create separate chat entries
-          let lastIndex = 0;
-          for (let i = 1; i < userMessages.length; i++) {
-            // Find the index of this user message in the original data array
-            const currentIndex = chatData.findIndex(msg => 
-              (msg.id === userMessages[i].id) || 
-              (msg.content === userMessages[i].content && msg.text === userMessages[i].text)
-            );
-            
-            // If index not found, skip this message
-            if (currentIndex === -1) continue;
-            
-            // If messages are far apart (more than 4 messages between), consider it a new conversation
-            if (currentIndex - lastIndex > 4) {
-              const chatTitle = userMessages[i].content || userMessages[i].text || 'New Chat';
-              const formattedTitle = chatTitle.length > 20 ? 
-                chatTitle.substring(0, 20) + '...' : chatTitle;
-              
-              uniqueChats.push({
-                id: uniqueChats.length + 1,
-                title: formattedTitle,
-                date: new Date().toLocaleDateString(),
-                messages: chatData.slice(lastIndex, currentIndex + 1),
-                userId: currentUser?.id || 'guest'
-              });
-            }
-            
-            lastIndex = currentIndex;
-          }
-        } else {
-          // Fallback if no user messages found
-          uniqueChats.push({
-            id: 1,
-            title: 'Financial Advice',
-            date: new Date().toLocaleDateString(),
-            messages: chatData,
-            userId: currentUser?.id || 'guest'
-          });
-        }
-        
-        setChatHistory(uniqueChats);
-        
-        // Save chat history to localStorage with user-specific key
-        localStorage.setItem(historyKey, JSON.stringify(uniqueChats));
-        
-        // Make sure to update the UI with the fetched history
-        if (formattedMessages.length > 0) {
-          setMessages(formattedMessages);
+      if (response && response.data) {
+                // Backend's getChatHistory returns { chatHistory: [], totalPages: X, currentPage: Y }
+        // Backend's getHistory (general) might return a flat array or similar structure.
+        if (response.data.chatHistory && Array.isArray(response.data.chatHistory)) {
+          actualApiChatSessions = response.data.chatHistory;
+                  } else if (Array.isArray(response.data)) { // Fallback for flat array responses (e.g., from general getHistory if it were called)
+          actualApiChatSessions = response.data;
+                  } else {
+          console.warn("API response data is not in a recognized array format. Received:", response.data);
+          actualApiChatSessions = [];
         }
       } else {
-        // If no chat history found, show welcome message
-        setShowWelcome(true);
-        setMessages([]);
-        
-        // Create a default chat history entry
-        const defaultChat = {
-          id: 1,
-          title: 'New Financial Chat',
-          date: new Date().toLocaleDateString(),
-          messages: [],
-          userId: currentUser?.id || 'guest'
-        };
-        
-        setChatHistory([defaultChat]);
-        localStorage.setItem(historyKey, JSON.stringify([defaultChat]));
+        console.warn("No data in API response or response is undefined.");
+        actualApiChatSessions = [];
       }
-    } catch (error) {
-      console.error('Error in fetchChatHistory function:', error);
-      // Set default values in case of error
-      const userKey = currentUser?.id || 'guest';
-      const messagesKey = `chatMessages_${userKey}`;
-      const historyKey = `chatHistory_${userKey}`;
+
       
-      // Create a default chat history entry
-      const defaultChat = {
-        id: 1,
-        title: 'New Financial Chat',
-        date: new Date().toLocaleDateString(),
-        messages: [],
-        userId: currentUser?.id || 'guest'
-      };
+      if (actualApiChatSessions.length === 0) {
+                setMessages([]); // Clear current messages if no history
+        setChatHistory([]);
+        setShowWelcome(true); // Show welcome message if no history and no current chat
+        setLoading(false);
+        return;
+      }
+
+      // Process API data: backend returns sessions, each containing messages
+      const processedHistory = actualApiChatSessions.map(session => {
+        const sessionId = session.sessionId || session._id; // _id is the session's ID from MongoDB
+        let title = '';
+        // Check if the session object itself has a 'query' field from the backend.
+        if (session.query && typeof session.query === 'string' && session.query.trim() !== '') {
+          const queryText = session.query.trim();
+          title = queryText.substring(0, 60) + (queryText.length > 60 ? "..." : "");
+                  } else if (session.messages && session.messages.length > 0) {
+          // If no session.query, try to get it from the first user message.
+          const firstUserMessage = session.messages.find(m => m.role === 'user');
+          if (firstUserMessage && firstUserMessage.content && typeof firstUserMessage.content === 'string' && firstUserMessage.content.trim() !== '') {
+            const queryText = firstUserMessage.content.trim();
+            title = queryText.substring(0, 60) + (queryText.length > 60 ? "..." : "");
+                      }
+        }
+
+        // If no title could be derived from session.query or the first user message, generate a default one.
+        if (!title) {
+            title = `Chat Session - ${new Date(session.updatedAt || session.createdAt || Date.now()).toLocaleDateString()}`;
+                    }
+        
+        const date = session.updatedAt || session.createdAt || new Date().toISOString();
+        const sessionUserId = session.userId;
+
+        if (!sessionId) {
+          console.warn("Skipping session due to missing sessionId:", session);
+          return null; // Skip if no sessionId
+        }
+
+        let messagesInSession = [];
+        if (session.messages && Array.isArray(session.messages)) {
+          messagesInSession = session.messages.map(msg => ({
+            id: msg._id || `msg-${Date.now()}-${Math.random()}`,
+            text: msg.content || msg.text || "", // Ensure text is always a string
+            sender: msg.role === 'user' ? 'user' : 'bot',
+            timestamp: msg.timestamp || msg.createdAt || date, // Use session date if message timestamp missing
+          })).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp)); // Sort messages within session
+        }
+        
+        return {
+          id: sessionId,
+          title: title,
+          date: date, // Store raw date for sorting, format for display later
+          messages: messagesInSession,
+          userId: sessionUserId
+        };
+      }).filter(Boolean) // Remove nulls from skipped sessions
+        .sort((a, b) => new Date(b.date) - new Date(a.date)); // Sort history by date, newest first
+
       
-      setChatHistory([defaultChat]);
-      localStorage.setItem(historyKey, JSON.stringify([defaultChat]));
+      if (processedHistory.length > 0) {
+        setChatHistory(processedHistory);
+        localStorage.setItem(historyKey, JSON.stringify(processedHistory)); // Save fetched history to localStorage
+        // If messages are also empty (meaning no active chat was loaded from its own localStorage item)
+        // then we can hide the welcome screen because we have history from API.
+        if (messages.length === 0) { 
+          setShowWelcome(false);
+        }
+      } else {
+        // If API returns no history, check if we loaded anything from localStorage
+        const localHistoryWasLoaded = storedHistory && JSON.parse(storedHistory).length > 0;
+        if (!localHistoryWasLoaded) {
+          // If API is empty AND local storage was also empty/invalid, then clear everything and show welcome.
+          setMessages([]); // Clear messages only if there's truly no history anywhere
+          setChatHistory([]);
+          setShowWelcome(true);
+          localStorage.removeItem(historyKey); // Ensure local storage is also cleared
+        } else {
+          // If API is empty BUT local storage had history, chatHistory is already set from localStorage.
+          // We don't want to clear messages or set showWelcome to true if local history exists.
+          // setShowWelcome state would have been handled by the localStorage loading block.
+        }
+      }
+
+    } catch (err) {
+      console.error("Error fetching/processing chat history from API:", err);
+      setError(err.message || "Failed to load chat history from server.");
+      toast.error(err.message || "Failed to load chat history from server. No cache fallback.");
       setMessages([]);
-      setShowWelcome(true); // Show welcome message for new chat
+      setChatHistory([]);
+      setShowWelcome(true);
     } finally {
       setLoading(false);
     }
   };
   
-  // Function to load a specific chat from history
-  const loadChatFromHistory = (chat) => {
-    if (!isAuthenticated) {
-      toast.info('Please login to view chat history');
-      navigate('/login');
-      return;
-    }
-    
-    console.log('Loading chat from history:', chat);
-    
-    if (chat && chat.messages && Array.isArray(chat.messages)) {
-      // Verify this chat belongs to the current user or is a guest chat
-      if (chat.userId && currentUser?.id && chat.userId !== currentUser.id) {
-        toast.error('You do not have permission to access this chat');
-        return;
-      }
-      
-      try {
-        // Map the messages to the format expected by the component
-        const formattedMessages = chat.messages.map((msg, index) => ({
-          id: index + 1,
-          text: msg.content || msg.text || '',
-          isBot: msg.sender === 'bot' || msg.isBot || false,
-          userId: msg.userId || currentUser?.id || 'guest',
-          timestamp: msg.timestamp || new Date().toISOString()
-        }));
-        
-        // Validate that we have valid messages
-        if (!formattedMessages || !Array.isArray(formattedMessages)) {
-          throw new Error('Invalid message format in chat history');
-        }
-        
-        console.log('Formatted messages for display:', formattedMessages.length);
-        
-        // Only set messages if we have valid formatted messages
-        if (formattedMessages.length > 0) {
-          setMessages(formattedMessages);
-          
-          // Get user-specific key for localStorage
-          const userKey = currentUser?.id || 'guest';
-          const messagesKey = `chatMessages_${userKey}`;
-          
-          // Save to localStorage with user-specific key
-          localStorage.setItem(messagesKey, JSON.stringify(formattedMessages));
-          
-          setInput('');
-          setError(null);
-          toast.success(`Chat loaded: ${chat.title}`);
-          
-          // Close sidebar on mobile after loading chat
-          if (isMobile) {
-            setShowSidebar(false);
-          }
-        } else {
-          // If no messages found, show error
-          throw new Error('No messages found in selected chat');
-        }
-      } catch (error) {
-        console.error('Error formatting chat messages:', error);
-        toast.error('Problem loading chat history');
-        
-        // Set default welcome message as fallback
-        setShowWelcome(true); // Show welcome message for new chat
-        
-        // Get user-specific key for localStorage
-        const userKey = currentUser?.id || 'guest';
-        const messagesKey = `chatMessages_${userKey}`;
-        
-        // Clear messages to show welcome screen
-        setMessages([]);
-        localStorage.setItem(messagesKey, JSON.stringify([]));
-      }
-    } else {
-      console.error('Invalid chat object:', chat);
-      toast.error('Could not load chat history');
-      
-      // Set default welcome message as fallback
-      // setMessages([welcomeMessage]);
-      // setShowWelcome(true); // Show welcome message for new chat
-    }
-  };
+
   
   // Function to delete a specific chat from history
   const deleteChat = async (chatId, event) => {
     event.stopPropagation(); // Prevent triggering the parent button click
-    
+
     if (!isAuthenticated) {
       toast.info('Please login to manage chat history');
       navigate('/login');
       return;
     }
-    
+
     try {
       setLoading(true);
-      // Deleting chat with ID
-      
+
+      // Find the chat to be deleted BEFORE any modifications
+      const chatToDelete = chatHistory.find(chat => chat.id === chatId);
+
+      if (!chatToDelete) {
+        toast.error("Could not find the chat to delete.");
+        setLoading(false);
+        return;
+      }
+
       // If user is authenticated, delete from server too
       if (currentUser?.id) {
         try {
           await apiService.chatbot.deleteSession(chatId);
-          toast.success('Chat successfully deleted');
+          toast.success('Chat successfully deleted from server');
         } catch (apiError) {
           console.error('Error deleting chat from server:', apiError);
-          toast.error('Problem deleting chat from server');
-          // Continue with local deletion even if server deletion fails
+          toast.error('Problem deleting chat from server. It will be removed locally.');
+          // Continue with local deletion even if server deletion fails (current behavior)
         }
       }
-      
+
       // Remove chat from local state
       const updatedHistory = chatHistory.filter(chat => chat.id !== chatId);
-      // Updated chat history
       setChatHistory(updatedHistory);
-      
-      // Get user-specific key for localStorage
-      const userKey = currentUser?.id || 'guest';
-      const historyKey = `chatHistory_${userKey}`;
-      
-      // Update localStorage with user-specific key
-      localStorage.setItem(historyKey, JSON.stringify(updatedHistory));
-      
-      // Show success message if not already shown
+
+      // If unauthenticated, show a success message for local deletion
       if (!currentUser?.id) {
-        toast.success('Chat successfully deleted');
+        toast.success('Chat successfully deleted locally');
       }
-      
-      // If this was the current active chat, reset to welcome message
-      const deletedChat = chatHistory.find(chat => chat.id === chatId);
-      if (deletedChat && messages.length > 0) {
-        // Check if current messages match the deleted chat
-        const currentFirstMsg = messages[0]?.text;
-        const deletedFirstMsg = deletedChat.messages[0]?.content || deletedChat.messages[0]?.text;
-        
-        if (currentFirstMsg === deletedFirstMsg) {
-          // Resetting current chat to welcome message
-          // setMessages([welcomeMessage]);
-          
-          // Update localStorage for messages too
-          const messagesKey = `chatMessages_${userKey}`;
-          // localStorage.setItem(messagesKey, JSON.stringify([welcomeMessage]));
+
+      // Check if the deleted chat was the active one and reset messages
+      // Use chatToDelete which was captured before history was modified
+      if (messages.length > 0 && chatToDelete.messages && chatToDelete.messages.length > 0) {
+        const currentFirstMsgContent = messages[0]?.text || messages[0]?.content;
+        const deletedFirstMsgContent = chatToDelete.messages[0]?.text || chatToDelete.messages[0]?.content;
+
+        // This comparison is based on current logic. If an activeChatId state exists,
+        // comparing activeChatId === chatId would be more robust.
+        if (currentFirstMsgContent === deletedFirstMsgContent) {
+          // Resetting current chat to welcome message or clearing it
+          if (typeof welcomeMessage !== 'undefined') {
+            setMessages([welcomeMessage]); // Assumes welcomeMessage is a single message object
+          } else {
+            setMessages([]); // Fallback: clear messages
+            console.warn("welcomeMessage is not defined in Chatbot.jsx. Clearing messages instead.");
+          }
+          // If you have an activeChatId state, reset it here: e.g., setActiveChatId(null);
         }
       }
+      // localStorage.setItem(messagesKey, JSON.stringify([welcomeMessage])); // Removed: Do not update localStorage for messages
     } catch (error) {
       console.error('Error in deleteChat function:', error);
       toast.error('Failed to delete chat. Please try again.');
@@ -1484,14 +1502,13 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
       setMessages([]);
       setShowWelcome(true);
       
-      // Get user-specific key for localStorage
-      const userKey = currentUser?.id || 'guest';
-      const messagesKey = `chatMessages_${userKey}`;
-      const historyKey = `chatHistory_${userKey}`;
+      // User-specific keys for localStorage are no longer needed here.
+      // const userKey = currentUser?.id || 'guest';
+      // const messagesKey = `chatMessages_${userKey}`;
+      // const historyKey = `chatHistory_${userKey}`;
       
-      // Update localStorage with empty messages array
-      localStorage.setItem(messagesKey, JSON.stringify([]));
-      localStorage.setItem(historyKey, JSON.stringify([]));
+      // localStorage.setItem(messagesKey, JSON.stringify([])); // Removed: Do not update localStorage for messages
+      // localStorage.setItem(historyKey, JSON.stringify([])); // Removed: Do not update localStorage for history
       
       // Create a default chat entry after clearing
       const defaultChat = {
@@ -1747,9 +1764,6 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
     setShowSidebar(!showSidebar);
   };
 
-  // Check if screen is mobile size
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-
   // Add event listener for window resize
   useEffect(() => {
     const handleResize = () => {
@@ -1838,7 +1852,7 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
                 <div key={chat.id} className="relative group">
                   <button 
                     className="w-full text-left p-3 rounded-lg text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-start gap-3 overflow-hidden text-sm border border-gray-200 dark:border-gray-700 hover:border-primary/30 dark:hover:border-secondary/30 shadow-sm hover:shadow-md group focus:outline-none focus:ring-2 focus:ring-primary/50 dark:focus:ring-secondary/50"
-                    onClick={() => loadChatFromHistory(chat)}
+                    onClick={() => loadChatFromHistory(chat)} // Call with only chat object
                   >
                     <div className="h-8 w-8 rounded-full bg-primary/10 dark:bg-secondary/20 flex items-center justify-center flex-shrink-0 text-primary dark:text-secondary shadow-sm">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1847,8 +1861,7 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
                     </div>
                     <div className="overflow-hidden flex-grow">
                       <div className="truncate font-medium group-hover:text-primary dark:group-hover:text-secondary transition-colors">{chat.title}</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{chat.date}</div>
-                    </div>
+                     </div>
                     <button 
                       onClick={(e) => deleteChat(chat.id, e)}
                       className="opacity-0 group-hover:opacity-100 p-1.5 rounded-full hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500 dark:text-red-400 transition-opacity focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:ring-opacity-50"
@@ -1864,18 +1877,7 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
             </div>
           )}
         </div>
-        
-        {/* App title - Enhanced */}
-        <div className="p-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
-          <div className="flex items-center justify-center">
-            <div className="h-7 w-7 rounded-full bg-primary/10 dark:bg-secondary/20 flex items-center justify-center mr-2 text-primary dark:text-secondary shadow-sm">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-              </svg>
-            </div>
-            <h2 className="text-sm font-bold text-primary dark:text-secondary">NiveshPath AI</h2>
-          </div>
-        </div>
+      
         
         {/* User & Settings - Enhanced */}
         <div className="mt-auto p-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
@@ -2092,8 +2094,7 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
                           <button 
                             onClick={() => {
                               navigator.clipboard.writeText(message.text);
-                              console.log('Copied to clipboard');
-                            }}
+                                                          }}
                             className="text-gray-800 hover:text-gray-900 dark:text-white dark:hover:text-white transition-colors p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-sm flex items-center group focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-secondary focus:ring-opacity-50"
                             title="Copy answer"
                           >
@@ -2111,8 +2112,7 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
                                 }).catch(err => console.error('Share failed:', err));
                               } else {
                                 navigator.clipboard.writeText(message.text);
-                                console.log('Copied to clipboard for sharing');
-                              }
+                                                              }
                             }}
                             className="text-gray-800 hover:text-gray-900 dark:text-white dark:hover:text-white transition-colors p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-sm flex items-center group focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-secondary focus:ring-opacity-50"
                             title="Share answer"
@@ -2274,13 +2274,13 @@ const Chatbot = ({ darkMode, setDarkMode }) => {
           }
           
           .notion-like-content th {
-            background-color: #f5f5f5;
+            background-color: #f5f5f5; /* Light mode background */
             font-weight: 600;
             text-align: left;
           }
           
           .dark .notion-like-content th {
-            background-color: #333;
+            background-color: #007147; /* Dark mode background */
           }
           
           .notion-like-content td, .notion-like-content th {

@@ -17,7 +17,7 @@ const EMICalculator = ({ darkMode, setDarkMode }) => {
   
   // Validation limits
   const limits = {
-    loanAmount: { min: 10000, max: 10000000 }, // Max 1 Crore
+    loanAmount: { min: 1000, max: 10000000 }, // Max 1 Crore
     interestRate: { min: 1, max: 20 }, // Max 20%
     loanTenure: { 
       years: { min: 1, max: 30 }, // Max 30 years
@@ -227,14 +227,14 @@ const EMICalculator = ({ darkMode, setDarkMode }) => {
                       type="range"
                       min={limits.loanAmount.min}
                       max={limits.loanAmount.max}
-                      step="10000"
+                      step="1000" // Changed step to 1000
                       value={formData.loanAmount}
                       onChange={handleChange}
                       name="loanAmount"
                       className="w-full"
                     />
                     <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
-                      <span>₹10,000</span>
+                      <span>₹1,000</span>
                       <span>₹1 Crore</span>
                     </div>
                   </div>
@@ -246,7 +246,7 @@ const EMICalculator = ({ darkMode, setDarkMode }) => {
                   </label>
                   <div className="input-with-icon">
                     <input
-                      type="number"
+                      type="text" // Changed type to text
                       id="interestRate"
                       name="interestRate"
                       value={formData.interestRate}
@@ -282,7 +282,7 @@ const EMICalculator = ({ darkMode, setDarkMode }) => {
                   <div className="flex space-x-2">
                     <div className="input-with-icon flex-1">
                       <input
-                        type="number"
+                        type="text" // Changed type to text
                         id="loanTenure"
                         name="loanTenure"
                         value={formData.loanTenure}

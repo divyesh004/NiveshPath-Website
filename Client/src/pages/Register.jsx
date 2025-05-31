@@ -28,7 +28,7 @@ const Register = () => {
     
     // Validate password match
     if (formData.password !== formData.confirmPassword) {
-      toast.error('Passwords do not match');
+      toast.error('Passwords do not match', { toastId: 'register-password-mismatch' });
       return;
     }
     
@@ -42,12 +42,12 @@ const Register = () => {
         password: formData.password
       });
       
-      toast.success('Registration successful! Please verify your email.');
+      toast.success('Registration successful! Please verify your email.', { toastId: 'register-success' });
       navigate('/verify-email');
       
     } catch (error) {
       console.error('Registration error:', error);
-      toast.error(error.message || 'Registration failed. Please try again.');
+      toast.error(error.message || 'Registration failed. Please try again.', { toastId: 'register-failed' });
     } finally {
       setLoading(false);
     }

@@ -37,7 +37,7 @@ const Login = () => {
         password: formData.password
       });
       
-      toast.success('Login successful!');
+      toast.success('Login successful!', { toastId: 'login-success' });
       
       // If onboarding is not completed, redirect to onboarding page
       if (!onboardingCompleted) {
@@ -54,9 +54,9 @@ const Login = () => {
       if (error.message && error.message.includes('Email not verified')) {
         setVerificationNeeded(true);
         setVerificationEmail(formData.email);
-        toast.error('Email not verified. Please verify your email to continue.');
+        toast.error('Email not verified. Please verify your email to continue.', { toastId: 'login-email-unverified' });
       } else {
-        toast.error(error.message || 'Login failed. Please check your credentials.');
+        toast.error(error.message || 'Login failed. Please check your credentials.', { toastId: 'login-failed' });
       }
     } finally {
       setLoading(false);
@@ -69,10 +69,10 @@ const Login = () => {
     setSendingVerification(true);
     try {
       await authAPI.sendVerificationEmail({ email: verificationEmail });
-      toast.success('Verification email sent successfully. Please check your inbox.');
+      toast.success('Verification email sent successfully. Please check your inbox.', { toastId: 'login-verification-sent' });
     } catch (error) {
       // Error sending verification email
-      toast.error(error.message || 'Failed to send verification email. Please try again.');
+      toast.error(error.message || 'Failed to send verification email. Please try again.', { toastId: 'login-verification-failed' });
     } finally {
       setSendingVerification(false);
     }

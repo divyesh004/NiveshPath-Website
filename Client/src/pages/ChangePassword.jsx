@@ -27,17 +27,17 @@ const ChangePassword = () => {
     
     // Validate passwords
     if (!formData.currentPassword || !formData.newPassword || !formData.confirmPassword) {
-      toast.error('All fields are required');
+      toast.error('All fields are required', { toastId: 'change-password-fields-required' });
       return;
     }
 
     if (formData.newPassword !== formData.confirmPassword) {
-      toast.error('New passwords do not match');
+      toast.error('New passwords do not match', { toastId: 'change-password-mismatch' });
       return;
     }
 
     if (formData.newPassword.length < 6) {
-      toast.error('New password must be at least 6 characters long');
+      toast.error('New password must be at least 6 characters long', { toastId: 'change-password-too-short' });
       return;
     }
 
@@ -48,7 +48,7 @@ const ChangePassword = () => {
         newPassword: formData.newPassword
       });
       
-      toast.success('Password changed successfully');
+      toast.success('Password changed successfully', { toastId: 'change-password-success' });
       // Clear form
       setFormData({
         currentPassword: '',
@@ -60,7 +60,7 @@ const ChangePassword = () => {
       navigate('/profile');
     } catch (error) {
       console.error('Error changing password:', error);
-      toast.error(error.response?.data?.message || 'Failed to change password');
+      toast.error(error.response?.data?.message || 'Failed to change password', { toastId: 'change-password-failed' });
     } finally {
       setLoading(false);
     }

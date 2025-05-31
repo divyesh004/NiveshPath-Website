@@ -41,21 +41,21 @@
 .character-container {
   display: flex;
   justify-content: center;
-  margin-bottom: 0.5rem;
-  height: 90px;
+  margin-bottom: 0.25rem; /* Reduced margin */
+  height: 80px; /* Adjusted height */
   position: relative;
 }
 
 .character {
-  width: 65px;
-  height: 65px;
+  width: 60px; /* Slightly smaller */
+  height: 60px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1); /* Softer shadow */
 }
 
 /* Owl character (default) */
@@ -66,7 +66,7 @@
 
 .character.owl:before {
   content: '🦉';
-  font-size: 32px;
+  font-size: 30px; /* Adjusted size */
 }
 
 /* Fox character */
@@ -77,12 +77,12 @@
 
 .character.fox:before {
   content: '🦊';
-  font-size: 32px;
+  font-size: 30px; /* Adjusted size */
 }
 
 /* Character animations */
 .character-bounce {
-  animation: bounce 0.5s ease;
+  animation: bounce 0.6s ease-in-out; /* Smoother bounce */
 }
 
 @keyframes bounce {
@@ -90,39 +90,41 @@
     transform: translateY(0);
   }
   50% {
-    transform: translateY(-15px);
+    transform: translateY(-10px); /* Reduced bounce height */
   }
 }
 
 /* Speech bubble */
 .character-speech-bubble {
   position: absolute;
-  top: -60px;
+  top: -55px; /* Adjusted position */
   left: 50%;
   transform: translateX(-50%);
   background-color: white;
-  border: 2px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 8px 12px;
-  min-width: 220px;
+  border: 1px solid #d1d5db; /* Tailwind gray-300, thinner border */
+  border-radius: 10px; /* Slightly less rounded */
+  padding: 7px 10px; /* Adjusted padding */
+  min-width: 200px; /* Adjusted min-width */
+  max-width: 260px; /* Added max-width for better control */
   text-align: center;
-  font-size: 0.85rem;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  font-size: 0.825rem; /* Slightly smaller font */
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.07);
   z-index: 10;
+  white-space: pre-wrap; /* Ensure line breaks work */
 }
 
 /* Speech bubble arrow */
 .character-speech-bubble:after {
   content: '';
   position: absolute;
-  bottom: -10px;
+  bottom: -8px; /* Adjusted for thinner border */
   left: 50%;
   transform: translateX(-50%);
   width: 0;
   height: 0;
-  border-left: 10px solid transparent;
-  border-right: 10px solid transparent;
-  border-top: 10px solid white;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 8px solid white;
 }
 
 /* Typing effect */
@@ -281,40 +283,68 @@ input[type="checkbox"]:checked + label {
 }
 
 /* Dark mode adjustments */
-@media (prefers-color-scheme: dark) {
-  .character-speech-bubble {
-    background-color: #1f2937;
-    border-color: #374151;
-    color: #e5e7eb;
-  }
-  
-  .character-speech-bubble:after {
-    border-top-color: #1f2937;
-  }
+/* Using .dark class from Tailwind for explicit dark mode */
+.dark .character-speech-bubble {
+  background-color: #374151; /* Tailwind gray-700 */
+  border-color: #4b5563; /* Tailwind gray-600 */
+  color: #f3f4f6; /* Tailwind gray-100 */
+}
+
+.dark .character-speech-bubble:after {
+  border-top-color: #374151; /* Match dark background */
+}
+
+/* Custom checkbox/radio styling - Add base styles if not fully covered by Tailwind in JSX */
+.custom-checkbox input[type="checkbox"]:focus + .icon,
+.custom-radio input[type="radio"]:focus + .icon {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  --tw-ring-color: var(--secondary-pro);
+  box-shadow: 0 0 0 2px var(--tw-ring-color);
+}
+
+.dark .custom-checkbox input[type="checkbox"]:focus + .icon,
+.dark .custom-radio input[type="radio"]:focus + .icon {
+  --tw-ring-color: var(--secondary-pro-dark);
 }
 
 /* Responsive adjustments */
 @media (max-width: 640px) {
   .character-container {
-    height: 80px;
+    height: 70px; /* Further reduced */
+    margin-bottom: 0.1rem;
   }
   
   .character {
-    width: 50px;
-    height: 50px;
+    width: 45px;
+    height: 45px;
   }
   
-  .character.owl:before {
-    font-size: 25px;
-  }
-  
+  .character.owl:before,
   .character.fox:before {
-    font-size: 25px;
+    font-size: 22px; /* Smaller emoji */
   }
   
   .character-speech-bubble {
-    min-width: 160px;
-    font-size: 0.75rem;
-    top: -55px;
+    min-width: 140px;
+    max-width: 200px; /* Max width for small screens */
+    font-size: 0.7rem; /* Smaller font for small screens */
+    padding: 6px 8px;
+    top: -50px; /* Adjusted position */
+  }
+
+  .flex.justify-between.mt-8 {
+    flex-direction: column; /* Stack buttons on small screens */
+    align-items: stretch; /* Make buttons full width */
+  }
+
+  .flex.justify-between.mt-8 > button,
+  .flex.justify-between.mt-8 > div + button { /* Target next button specifically */
+    width: 100%;
+    margin-left: 0 !important; /* Override ml-auto */
+  }
+
+  .flex.justify-between.mt-8 > button:first-child:not(:only-child) { /* If there's a back button */
+    margin-bottom: 0.5rem; /* Add space between stacked buttons */
   }
 }

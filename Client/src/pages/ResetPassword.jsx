@@ -25,18 +25,18 @@ const ResetPassword = () => {
   const handleSendOTP = async (e) => {
     e.preventDefault();
     if (!formData.email) {
-      toast.error('Please enter your email address');
+      toast.error('Please enter your email address', { toastId: 'reset-password-no-email' });
       return;
     }
 
     setLoading(true);
     try {
       await apiService.auth.forgotPassword({ email: formData.email });
-      toast.success('OTP sent to your email address');
+      toast.success('OTP sent to your email address', { toastId: 'reset-password-otp-sent' });
       setStep(2);
     } catch (error) {
       // Error sending OTP
-      toast.error(error.response?.data?.message || 'Failed to send OTP');
+      toast.error(error.response?.data?.message || 'Failed to send OTP', { toastId: 'reset-password-otp-failed' });
     } finally {
       setLoading(false);
     }
@@ -45,7 +45,7 @@ const ResetPassword = () => {
   const handleVerifyOTP = async (e) => {
     e.preventDefault();
     if (!formData.otp) {
-      toast.error('Please enter the OTP');
+      toast.error('Please enter the OTP', { toastId: 'reset-password-no-otp' });
       return;
     }
 
@@ -55,11 +55,11 @@ const ResetPassword = () => {
         email: formData.email, 
         otp: formData.otp 
       });
-      toast.success('OTP verified successfully');
+      toast.success('OTP verified successfully', { toastId: 'reset-password-otp-verified' });
       setStep(3);
     } catch (error) {
       // Error verifying OTP
-      toast.error(error.response?.data?.message || 'Invalid OTP');
+      toast.error(error.response?.data?.message || 'Invalid OTP', { toastId: 'reset-password-otp-invalid' });
     } finally {
       setLoading(false);
     }
@@ -69,17 +69,17 @@ const ResetPassword = () => {
     e.preventDefault();
     
     if (!formData.newPassword || !formData.confirmPassword) {
-      toast.error('Please enter and confirm your new password');
+      toast.error('Please enter and confirm your new password', { toastId: 'reset-password-no-new-password' });
       return;
     }
 
     if (formData.newPassword !== formData.confirmPassword) {
-      toast.error('Passwords do not match');
+      toast.error('Passwords do not match', { toastId: 'reset-password-mismatch' });
       return;
     }
 
     if (formData.newPassword.length < 6) {
-      toast.error('Password must be at least 6 characters long');
+      toast.error('Password must be at least 6 characters long', { toastId: 'reset-password-too-short' });
       return;
     }
 
@@ -90,11 +90,11 @@ const ResetPassword = () => {
         otp: formData.otp,
         newPassword: formData.newPassword
       });
-      toast.success('Password reset successfully');
+      toast.success('Password reset successfully', { toastId: 'reset-password-success' });
       navigate('/login');
     } catch (error) {
       // Error resetting password
-      toast.error(error.response?.data?.message || 'Failed to reset password');
+      toast.error(error.response?.data?.message || 'Failed to reset password', { toastId: 'reset-password-failed' });
     } finally {
       setLoading(false);
     }

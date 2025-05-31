@@ -28,7 +28,7 @@ const EmailVerification = () => {
 
   const sendVerificationEmail = async () => {
     if (!email) {
-      toast.error('Please enter your email address');
+      toast.error('Please enter your email address', { toastId: 'email-verify-no-email' });
       return;
     }
 
@@ -36,10 +36,10 @@ const EmailVerification = () => {
     try {
       await apiService.auth.sendVerificationEmail({ email });
       setVerificationSent(true);
-      toast.success('Verification email sent! Please check your inbox.');
+      toast.success('Verification email sent! Please check your inbox.', { toastId: 'email-verify-sent' });
     } catch (error) {
       // Error sending verification email
-      toast.error(error.response?.data?.message || 'Failed to send verification email');
+      toast.error(error.response?.data?.message || 'Failed to send verification email', { toastId: 'email-verify-send-failed' });
     } finally {
       setLoading(false);
     }
@@ -49,7 +49,7 @@ const EmailVerification = () => {
     setVerifying(true);
     try {
       await apiService.auth.verifyEmail({ token });
-      toast.success('Email verified successfully!');
+      toast.success('Email verified successfully!', { toastId: 'email-verify-success' });
       
       // Check if user has already completed onboarding
       const onboardingStatus = localStorage.getItem('onboardingCompleted');
@@ -62,7 +62,7 @@ const EmailVerification = () => {
       }
     } catch (error) {
       // Error verifying email
-      toast.error(error.response?.data?.message || 'Failed to verify email');
+      toast.error(error.response?.data?.message || 'Failed to verify email', { toastId: 'email-verify-failed' });
     } finally {
       setVerifying(false);
     }

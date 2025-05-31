@@ -22,39 +22,71 @@ const SIPCalculator = ({ darkMode, setDarkMode }) => {
   });
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: parseFloat(value) || 0
-    }));
+    const { name, value, max } = e.target; // min is not used for clamping here anymore
+
+    if (name === "monthlyInvestment" || name === "expectedReturnRate" || name === "timePeriod") {
+      if (value === "") {
+        setFormData(prev => ({ ...prev, [name]: "" }));
+        return;
+      }
+
+      const numericValue = parseFloat(value);
+
+      if (!isNaN(numericValue)) { // It's a number
+        const K_MAX_VALUE = parseFloat(max);
+        if (!isNaN(K_MAX_VALUE) && numericValue > K_MAX_VALUE) {
+          setFormData(prev => ({ ...prev, [name]: K_MAX_VALUE }));
+        } else {
+          // Allow numbers like 6, 60, 600 even if min is 500
+          // Also allow 0 if user types it explicitly
+          setFormData(prev => ({ ...prev, [name]: numericValue }));
+        }
+      }
+      // If numericValue is NaN (e.g. user typed "abc" and pattern failed), do nothing.
+      // The input field will retain its previous valid state due to controlled component.
+    }
   };
 
   // Calculate SIP returns
   useEffect(() => {
-    const { monthlyInvestment, expectedReturnRate, timePeriod } = formData;
+    const parseAndClamp = (valStr, min, max, defaultIfNaN) => {
+      let num = parseFloat(valStr);
+      if (isNaN(num)) {
+        num = defaultIfNaN;
+      }
+      
+      if (num < min) return min;
+      if (num > max) return max;
+      return num;
+    };
+
+    const mi = parseAndClamp(formData.monthlyInvestment, 500, 1000000, 500);
+    const er = parseAndClamp(formData.expectedReturnRate, 1, 30, 1);
+    const tp = parseAndClamp(formData.timePeriod, 1, 40, 1);
     
     // Monthly rate
-    const monthlyRate = expectedReturnRate / 12 / 100;
+    const monthlyRate = er / 12 / 100;
     
     // Calculate total months
-    const totalMonths = timePeriod * 12;
+    const totalMonths = tp * 12;
     
     // Calculate future value using SIP formula
     // FV = P × ((1 + r)^n - 1) / r × (1 + r)
-    const futureValue = monthlyInvestment * ((Math.pow(1 + monthlyRate, totalMonths) - 1) / monthlyRate) * (1 + monthlyRate);
+    const futureValue = mi * ((Math.pow(1 + monthlyRate, totalMonths) - 1) / monthlyRate) * (1 + monthlyRate);
     
     // Calculate total investment
-    const totalInvestment = monthlyInvestment * totalMonths;
+    const totalInvestmentVal = mi * totalMonths;
     
     // Calculate estimated returns
-    const estimatedReturns = futureValue - totalInvestment;
+    const estimatedReturnsVal = futureValue - totalInvestmentVal;
     
     // Generate yearly data for chart
     const yearlyData = [];
-    for (let year = 1; year <= timePeriod; year++) {
+    for (let year = 1; year <= tp; year++) { // Use clamped time period (tp)
       const months = year * 12;
-      const yearlyValue = monthlyInvestment * ((Math.pow(1 + monthlyRate, months) - 1) / monthlyRate) * (1 + monthlyRate);
-      const yearlyInvestment = monthlyInvestment * months;
+      // Use clamped monthly investment (mi) and monthlyRate (derived from clamped er)
+      const yearlyValue = mi * ((Math.pow(1 + monthlyRate, months) - 1) / monthlyRate) * (1 + monthlyRate);
+      const yearlyInvestment = mi * months;
       const yearlyReturns = yearlyValue - yearlyInvestment;
       
       yearlyData.push({
@@ -66,8 +98,8 @@ const SIPCalculator = ({ darkMode, setDarkMode }) => {
     }
     
     setResults({
-      totalInvestment: Math.round(totalInvestment),
-      estimatedReturns: Math.round(estimatedReturns),
+      totalInvestment: Math.round(totalInvestmentVal),
+      estimatedReturns: Math.round(estimatedReturnsVal),
       totalValue: Math.round(futureValue),
       yearlyData
     });
@@ -259,11 +291,13 @@ const SIPCalculator = ({ darkMode, setDarkMode }) => {
               <div className="space-y-5">
                 <div>
                   <label htmlFor="monthlyInvestment" className="form-label text-xs sm:text-sm">
-                    Monthly Investment (₹)
+                    Monthly Investment (₹) (Min: 500)
                   </label>
                   <div className="input-with-icon">
                     <input
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       id="monthlyInvestment"
                       name="monthlyInvestment"
                       value={formData.monthlyInvestment}
@@ -277,7 +311,7 @@ const SIPCalculator = ({ darkMode, setDarkMode }) => {
                     <input
                       type="range"
                       min="500"
-                      max="100000"
+                      max="1000000"
                       step="500"
                       value={formData.monthlyInvestment}
                       onChange={handleChange}
@@ -286,7 +320,7 @@ const SIPCalculator = ({ darkMode, setDarkMode }) => {
                     />
                     <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
                       <span>₹500</span>
-                      <span>₹100,000</span>
+                      <span>₹1,000,000</span>
                     </div>
                   </div>
                 </div>

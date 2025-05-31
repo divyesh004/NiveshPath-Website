@@ -64,7 +64,11 @@ const BudgetPlanner = ({ darkMode, setDarkMode }) => {
   const handleAddExpense = (e) => {
     e.preventDefault();
     
-    if (!newCategory.trim() || !newAmount || parseFloat(newAmount) <= 0) return;
+    let amountValue = parseFloat(newAmount);
+    // Assuming a min of 1 for amount, and no specific max from UI, but can be added if needed.
+    if (isNaN(amountValue) || amountValue <= 0) return; 
+
+    if (!newCategory.trim()) return;
     
     const colors = [
       'rgba(255, 99, 132, 0.8)',
@@ -103,7 +107,11 @@ const BudgetPlanner = ({ darkMode, setDarkMode }) => {
   const handleUpdateExpense = (e) => {
     e.preventDefault();
     
-    if (!newCategory.trim() || !newAmount || parseFloat(newAmount) <= 0) return;
+    let amountValue = parseFloat(newAmount);
+    // Assuming a min of 1 for amount, and no specific max from UI, but can be added if needed.
+    if (isNaN(amountValue) || amountValue <= 0) return;
+
+    if (!newCategory.trim()) return;
     
     setExpenses(expenses.map(expense => 
       expense.id === editingId 
@@ -123,8 +131,19 @@ const BudgetPlanner = ({ darkMode, setDarkMode }) => {
 
   // Handle income change
   const handleIncomeChange = (e) => {
-    const value = parseFloat(e.target.value) || 0;
-    setIncome(value);
+    const { value, min, max } = e.target;
+    let parsedValue = parseFloat(value) || 0;
+
+    const minValue = parseFloat(min);
+    const maxValue = parseFloat(max);
+
+    if (!isNaN(minValue) && parsedValue < minValue) {
+      parsedValue = minValue;
+    }
+    if (!isNaN(maxValue) && parsedValue > maxValue) {
+      parsedValue = maxValue;
+    }
+    setIncome(parsedValue);
   };
 
   return (
@@ -220,6 +239,7 @@ const BudgetPlanner = ({ darkMode, setDarkMode }) => {
                   value={income}
                   onChange={handleIncomeChange}
                   min="0"
+                  max="10000000"
                   className="input-field"
                 />
               </div>
@@ -260,6 +280,7 @@ const BudgetPlanner = ({ darkMode, setDarkMode }) => {
                     value={newAmount}
                     onChange={(e) => setNewAmount(e.target.value)}
                     min="1"
+                    max="1000000"
                     className="input-field"
                     required
                   />
